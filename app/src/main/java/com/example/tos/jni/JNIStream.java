@@ -1,10 +1,12 @@
 package com.example.tos.jni;
 
+import com.example.tos.stream.Loader;
+
 public class JNIStream {
     /*
      * jni function declarations
      */
-    static public native void createStream();
+    static public native void createStream(Loader loader);
     static public native void deleteStream();
 
     static public native boolean getFrame(long index);

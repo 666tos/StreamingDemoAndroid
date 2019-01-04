@@ -4,8 +4,10 @@ import com.example.tos.jni.JNIStream;
 
 public class StreamingCore {
 
+    final Loader loader = new Loader();
+
     public StreamingCore() {
-        JNIStream.createStream();
+        JNIStream.createStream(loader);
     }
 
     public boolean getFrame(long index) {

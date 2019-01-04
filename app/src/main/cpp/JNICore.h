@@ -29,7 +29,7 @@ class JNICore {
         static void terminate();
 
         static JNICore *getInstance();
-        JNIEnv *getJNIEnv();
+        static JNIEnv *getJNIEnv();
 
     private:
         static std::unique_ptr<JNICore> instance_;

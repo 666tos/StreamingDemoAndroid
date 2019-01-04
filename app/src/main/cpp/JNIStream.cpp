@@ -7,6 +7,7 @@
 #include "IStreamStateDelegate.hpp"
 #include "ITSPartLoaderService.hpp"
 #include "Log.hpp"
+#include "JNICore.h"
 
 #include <jni.h>
 #include <sys/types.h>
@@ -17,30 +18,42 @@ using namespace StreamingEngine;
 
 class StreamStateDelegateImpl: public IStreamStateDelegate {
 public:
-    virtual ~StreamStateDelegateImpl() {};
-    virtual void streamStateChanged(StreamState state) {};
+    virtual ~StreamStateDelegateImpl() {}
+    virtual void streamStateChanged(StreamState state) {}
 };
 
 class TSPartLoaderServiceImpl: public ITSPartLoaderService {
 public:
-    virtual ~TSPartLoaderServiceImpl() {};
+    TSPartLoaderServiceImpl(jobject loader) {
+        auto env = Core::JNICore::getJNIEnv();
+        loader_= env->NewGlobalRef(loader);
+    }
+
+    virtual ~TSPartLoaderServiceImpl() {
+        auto env = Core::JNICore::getJNIEnv();
+        env->DeleteGlobalRef(loader_);
+    }
+
     virtual void load(TSPartRef tsPart) {
-//        jclass localStreamClass = env->FindClass("java/io/InputStream");
-//
-//        if(NULL == localStreamClass)
-//        {
-//        }
-//
-//        streamClass_ = static_cast<jclass>(env->NewGlobalRef(localStreamClass));
+        auto env = Core::JNICore::getJNIEnv();
+
+        jclass loaderClass = env->GetObjectClass(loader_);
+        jmethodID methodID = env->GetMethodID(loaderClass, "load", "(Ljava/lang/String;I)V");
+
+        jstring url = env->NewStringUTF(tsPart->url().c_str());
+        env->CallVoidMethod(loader_, methodID, url, tsPart->tag());
+
         Util::Log(Util::Log::Severity::Verbose) << "Load: " << tsPart->tag() << " URL: " << tsPart->url();
-    };
+    }
+private:
+    jobject loader_;
 };
 
 static Stream *sStream_ = nullptr;
 
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *env, jclass type) {
+JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *env, jclass type, jobject loader) {
     auto stateDelegate = new StreamStateDelegateImpl();
-    auto loadService = new TSPartLoaderServiceImpl();
+    auto loadService = new TSPartLoaderServiceImpl(loader);
 
     std::vector<TSPartRef> tsParts;
 

@@ -1,11 +1,13 @@
-package com.example.tos.streamingdemoandroid;
+package com.example.tos.stream;
 
 import android.os.AsyncTask;
 
 public class Loader {
     AsyncTask<Void, Void, Void> mTask;
 
-    public void load(final String url) {
+    public void load(final String url, final int tag) {
+        System.out.println("HI JAVA: tag: " + tag + "url: " + url);
+
         mTask = new AsyncTask<Void, Void, Void> () {
 
             @Override
