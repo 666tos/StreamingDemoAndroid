@@ -11,6 +11,8 @@ public class JNIStream {
 
     static public native boolean getFrame(long index);
 
+    static public native void setData(byte data[], int part);
+
     // Used to load the 'TacxStreaming' library on application startup.
     static {
         System.loadLibrary("TacxStreaming");

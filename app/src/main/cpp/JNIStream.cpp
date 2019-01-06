@@ -7,11 +7,13 @@
 #include "IStreamStateDelegate.hpp"
 #include "ITSPartLoaderService.hpp"
 #include "Log.hpp"
+#include "RawData.hpp"
 #include "JNICore.h"
 
 #include <jni.h>
 #include <sys/types.h>
 #include <vector>
+#include <GLES2/gl2.h>
 
 using namespace std;
 using namespace StreamingEngine;
@@ -58,10 +60,10 @@ JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *e
     std::vector<TSPartRef> tsParts;
 
     char charBuffer[1024];
-    const char *formatString = "https://nikitasplendo1-euwe.streaming.media.azure.net/125d908d-0b7f-42df-b8c2-cfb956ff37e8/T205523.ism/QualityLevels(2210000)/Fragments(video=%i0000000,format=m3u8-aapl-v3,audiotrack=aac_und_2_127_2_1)";
+    const char *formatString = "https://nikitasplendo1-euwe.streaming.media.azure.net/125d908d-0b7f-42df-b8c2-cfb956ff37e8/T205523.ism/QualityLevels(720000)/Fragments(video=%i0000000,format=m3u8-aapl-v3,audiotrack=aac_und_2_127_2_1)";
 
     for (int i = 1; i < 8; i++) {
-        sprintf(charBuffer, formatString, i);
+        sprintf(charBuffer, formatString, 6 * i);
         string url(charBuffer);
         tsParts.push_back(make_shared<TSPart>(i, url, 180, 30));
     }
@@ -77,5 +79,25 @@ JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_deleteStream(JNIEnv *e
 
 JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_getFrame(JNIEnv *env, jclass type, jlong index) {
     auto frame = sStream_->getFrame(index);
+
+    if (frame != nullptr) {
+        auto yPlane = frame->getPlane(Frame::Plane::Y);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, frame->getWidth(), frame->getHeight(), 0, GL_ALPHA, GL_UNSIGNED_BYTE, yPlane->getData());
+    }
+
     return (frame != nullptr);
+}
+
+JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setData(JNIEnv *env, jclass type, jbyteArray data, jint part) {
+    int length = env->GetArrayLength(data);
+
+    void *dataBuffer = env->GetPrimitiveArrayCritical(data, NULL);
+    RawData *rawData = new RawData(dataBuffer, length);
+
+    env->ReleasePrimitiveArrayCritical(data, dataBuffer, 0);
+
+    sStream_->setData(rawData, part);
+
+    if (env->ExceptionCheck()) return;
 }

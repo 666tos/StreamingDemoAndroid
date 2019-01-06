@@ -8,10 +8,15 @@ public class StreamingCore {
 
     public StreamingCore() {
         JNIStream.createStream(loader);
+        loader.mStreamingCore = this;
     }
 
     public boolean getFrame(long index) {
         return JNIStream.getFrame(index);
+    }
+
+    public void setData(byte data[], int part) {
+        JNIStream.setData(data, part);
     }
 
     @Override

@@ -34,6 +34,8 @@ endforeach()
 target_link_libraries(TacxStreaming
         PRIVATE
         android
+        EGL
+        GLESv2
         log
         ${ffmpeg_libs}
         )

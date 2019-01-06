@@ -1,6 +1,9 @@
 package com.example.tos.streamingdemoandroid;
 
+import android.app.Activity;
+import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.view.ViewGroup;
 import android.widget.TextView;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -12,7 +15,9 @@ import android.view.MenuItem;
 import com.example.tos.jni.JNIStream;
 import com.example.tos.stream.StreamingCore;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity implements Renderer.Delegate {
+
+    private GLSurfaceView mGLSurfaceView;
 
     static int index_ = 0;
     StreamingCore streamingCore_ = new StreamingCore();
@@ -20,54 +25,36 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                index_ += 50;
+        final Renderer renderer = new Renderer(this, this);
+        mGLSurfaceView = new GLSurfaceView(this);
+        mGLSurfaceView.setEGLContextClientVersion(2);
+        mGLSurfaceView.setRenderer(renderer);
 
-                boolean result = streamingCore_.getFrame(index_);
-                System.out.println("GET FRAME [" + index_ + "]: " + result);
+//        ViewGroup mainView = findViewById(R.layout.activity_main);
+//        mainView.addView(mGLSurfaceView);
 
-//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-//                        .setAction("Action", null).show();
-            }
-        });
-
-        // Example of a call to a native method
-        TextView tv = (TextView) findViewById(R.id.sample_text);
-        tv.setText(stringFromJNI());
+        setContentView(mGLSurfaceView);
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
+    protected void onResume()  {
+        // The activity must call the GL surface view's onResume() on activity onResume().
+        super.onResume();
+        mGLSurfaceView.onResume();
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+    protected void onPause() {
+        // The activity must call the GL surface view's onPause() on activity onPause().
+        super.onPause();
+        mGLSurfaceView.onPause();
     }
 
-    /**
-     * A native method that is implemented by the 'native-lib' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
+    @Override
+    public void bindFrame() {
+        index_++;
+
+        streamingCore_.getFrame(index_);
+    }
 }
