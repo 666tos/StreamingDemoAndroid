@@ -13,4 +13,9 @@ Sources and build scripts can be found here - https://github.com/tanersener/mobi
 
 TODO:
 
+  - Investigate memcpy vs bioinic-memcpy performance
+  - Investigate VulkanAPI capabilities for no-copy texture rendering similar to Metal implementation in iOS
+  https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/usage_patterns.html
+  - Investigate Hardware Acceleration
+  https://trac.ffmpeg.org/wiki/HWAccelIntro
   - Merge this repository with https://github.com/TacxDev/Tacx-streaming.git
