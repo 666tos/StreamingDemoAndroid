@@ -40,3 +40,7 @@ JNIEnv* JNICore::getJNIEnv() {
     getInstance()->vm_->AttachCurrentThread(&env, NULL);
     return env;
 }
+
+JavaVM* JNICore::getVM() {
+    return getInstance()->vm_;
+}

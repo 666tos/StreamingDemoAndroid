@@ -30,6 +30,7 @@ class JNICore {
 
         static JNICore *getInstance();
         static JNIEnv *getJNIEnv();
+        static JavaVM *getVM();
 
     private:
         static std::unique_ptr<JNICore> instance_;

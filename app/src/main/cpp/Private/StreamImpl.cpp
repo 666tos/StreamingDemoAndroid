@@ -22,6 +22,11 @@ extern "C" {
 #include "libavformat/avio.h"
 #include "libavutil/avutil.h"
 #include "libavutil/log.h"
+
+#ifdef __ANDROID_HARDWARE_DECODING__
+#include "libavcodec/jni.h"
+#include "JNICore.h"
+#endif
 }
 
 using namespace std;
@@ -80,6 +85,10 @@ void StreamImpl::initializeFFMpeg() {
     }
     
     av_log_set_level(config_->ffmpegLogLevel());
+
+#ifdef __ANDROID_HARDWARE_DECODING__
+    av_jni_set_java_vm(Core::JNICore::getVM(), NULL);
+#endif
 }
 
 void StreamImpl::setState(StreamState state) {

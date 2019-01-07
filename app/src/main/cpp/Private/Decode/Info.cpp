@@ -100,7 +100,7 @@ bool Info::prepareForReading() {
 #ifdef __IOS_HARDWARE_DECODING__
     codecContext->get_format = Info::getFormat;
 #endif
-    
+
     if (!canOpenCodec(videoCodec, codecContext)) {
         avcodec_free_context(&codecContext);
         return false;

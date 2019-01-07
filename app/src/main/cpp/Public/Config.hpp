@@ -11,9 +11,13 @@
 #include <stdio.h>
 #include "Log.hpp"
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 
 #define __IOS_HARDWARE_DECODING__
+
+#elif defined(__ANDROID__)
+
+#define __ANDROID_HARDWARE_DECODING__
 
 #endif
 
