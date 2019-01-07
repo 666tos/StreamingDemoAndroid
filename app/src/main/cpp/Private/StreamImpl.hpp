@@ -57,7 +57,8 @@ namespace StreamingEngine {
         TSPartLoader *tsPartLoader_;
         TSPartWorker *tsPartWorker_;
         Decode::Worker *decodeWorker_;
-        
+
+        void alignTSParts();
         void initializeFFMpeg();
         void setState(StreamState state);
         

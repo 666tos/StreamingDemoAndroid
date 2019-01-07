@@ -10,8 +10,8 @@ varying highp vec2  _vTexCoord;
 void main()
 {
     highp float y = texture2D(_uPlaneY, _vTexCoord).a;
-    highp float u = 0.5;
-    highp float v = 0.5;
+    highp float u = texture2D(_uPlaneU, _vTexCoord).a;
+    highp float v = texture2D(_uPlaneV, _vTexCoord).a;
     highp vec3 yuv = vec3(y, u, v);
 
     highp vec3 colorOffset = vec3(0, -0.5, -0.5);

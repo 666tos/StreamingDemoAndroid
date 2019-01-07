@@ -32,7 +32,8 @@ StreamImpl::StreamImpl(Config *config, IStreamStateDelegate *stateDelegate, ITSP
     stateDelegate_(stateDelegate),
     tsPartLoaderService_(tsPartLoaderService),
     tsParts_(tsParts) {
-        
+
+    alignTSParts();
     initializeFFMpeg();
         
     frameFactory_ = new FrameFactory(config_);
@@ -52,6 +53,19 @@ StreamImpl::~StreamImpl() {
     delete frameFactory_;
     delete tsPartWorker_;
     delete decodeWorker_;
+}
+
+void StreamImpl::alignTSParts() {
+    // Iterage through TSParts and set frame offset
+
+    int64_t totalOffset = 0;
+
+    for (auto it = tsParts_.begin(); it != tsParts_.end(); ++it) {
+        TSPartRef tsPart = *it;
+
+        tsPart->setFrameOffset(totalOffset);
+        totalOffset += tsPart->numberOfFrames();
+    }
 }
 
 void StreamImpl::initializeFFMpeg() {
@@ -78,7 +92,14 @@ void StreamImpl::setState(StreamState state) {
 }
 
 void StreamImpl::setData(RawData *rawData, int64_t part) {
-    TSPartRef tsPart = tsParts_[part];
+    auto it = find_if(tsParts_.begin(), tsParts_.end(), [&part](const TSPartRef& obj) {return obj->tag() == part;});
+    if (it == tsParts_.end()) {
+        Util::Log(Util::Log::Severity::Error) << "[Set Data] part not found: " << part;
+        return;
+    }
+
+    Util::Log(Util::Log::Severity::Info) << "LOADED TSPART: " << part;
+    TSPartRef tsPart = *it;
     tsPart->markAsLoaded();
     
     Decode::WorkerTask *task = new Decode::WorkerTask(part, rawData);
@@ -179,6 +200,8 @@ void StreamImpl::determineCurrentTSPart(int64_t frameIndex) {
     if (currentTSPart &&
         frameIndex >= currentTSPart->frameOffset() &&
         frameIndex < currentTSPart->maxFrame()) {
+
+        // Frame with frameIndex is contained in current part, don't switch parts
         targetFrameIndex_ = frameIndex;
         return;
     }

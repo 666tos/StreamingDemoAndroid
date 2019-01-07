@@ -13,14 +13,18 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import com.example.tos.jni.JNIStream;
+import com.example.tos.stream.StateDelegate;
 import com.example.tos.stream.StreamingCore;
 
-public class MainActivity extends Activity implements Renderer.Delegate {
+public class MainActivity extends Activity implements Renderer.Delegate, StateDelegate {
 
     private GLSurfaceView mGLSurfaceView;
 
-    static int index_ = 0;
-    StreamingCore streamingCore_ = new StreamingCore();
+    final double VIDEO_FPS = 30;
+    final double PLAYBACK_SPEED = 2.0;
+    double startTime = 0;
+
+    StreamingCore streamingCore_ = new StreamingCore(this);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,9 +35,6 @@ public class MainActivity extends Activity implements Renderer.Delegate {
         mGLSurfaceView.setEGLContextClientVersion(2);
         mGLSurfaceView.setRenderer(renderer);
 
-//        ViewGroup mainView = findViewById(R.layout.activity_main);
-//        mainView.addView(mGLSurfaceView);
-
         setContentView(mGLSurfaceView);
     }
 
@@ -41,6 +42,9 @@ public class MainActivity extends Activity implements Renderer.Delegate {
     protected void onResume()  {
         // The activity must call the GL surface view's onResume() on activity onResume().
         super.onResume();
+
+        startTime = getTime();
+
         mGLSurfaceView.onResume();
     }
 
@@ -51,10 +55,24 @@ public class MainActivity extends Activity implements Renderer.Delegate {
         mGLSurfaceView.onPause();
     }
 
-    @Override
-    public void bindFrame() {
-        index_++;
+    // Renderer.Delegate
 
-        streamingCore_.getFrame(index_);
+    @Override
+    public void bindFrame(int uPlaneY, int uPlaneU, int uPlaneV) {
+        double currentTime = getTime();
+        double frameIndex = (currentTime - startTime) * VIDEO_FPS * PLAYBACK_SPEED;
+
+        streamingCore_.bindFrame((int)frameIndex, uPlaneY, uPlaneU, uPlaneV);
+    }
+
+    // StateDelegate
+
+    @Override
+    public void stateChanged(int state) {
+        final StreamState streamState = StreamState.fromInt(state);
+    }
+
+    private double getTime() {
+        return (double) System.currentTimeMillis()/1000;
     }
 }

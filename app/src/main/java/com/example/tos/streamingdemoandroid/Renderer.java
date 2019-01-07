@@ -12,7 +12,7 @@ import javax.microedition.khronos.opengles.GL10;
 
 public class Renderer implements GLSurfaceView.Renderer  {
     public interface Delegate {
-        void bindFrame();
+        void bindFrame(int uPlaneY, int uPlaneU, int uPlaneV);
     }
 
 
@@ -119,13 +119,11 @@ public class Renderer implements GLSurfaceView.Renderer  {
 
         GLES20.glUseProgram(shaderProgram);
 
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glUniform1i(uPlaneY, 0); // Slot0 - GL_TEXTURE0
+        GLES20.glUniform1i(uPlaneU, 1); // Slot1 - GL_TEXTURE0
+        GLES20.glUniform1i(uPlaneV, 2); // Slot2 - GL_TEXTURE0
 
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureIDY);
-
-        GLES20.glUniform1i(uPlaneY, 0); // Slot - GL_TEXTURE0
-
-        mDelegate.bindFrame();
+        mDelegate.bindFrame(textureIDY, textureIDU, textureIDV);
 
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vertexBuffer[0]);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6);

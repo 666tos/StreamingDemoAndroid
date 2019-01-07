@@ -24,7 +24,7 @@ Config::Config(int64_t targetBitrate, int64_t framebufferSize, int64_t advanceDo
 }
 
 Config* Config::defaultConfig() {
-    return new Config(2000000, 180, 2, 2, Util::Log::Severity::Debugger);
+    return new Config(2000000, 180, 2, 2, Util::Log::Severity::Verbose);
 }
 
 int Config::ffmpegLogLevel() const {

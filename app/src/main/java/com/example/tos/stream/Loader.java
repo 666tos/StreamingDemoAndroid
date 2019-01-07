@@ -17,7 +17,7 @@ public class Loader {
     public StreamingCore mStreamingCore;
 
     public void load(final String urlString, final int tag) {
-        System.out.println("HI JAVA: tag: " + tag + "url: " + urlString);
+        System.out.println("Load chunk: tag: " + tag + " url: " + urlString);
 
         mTask = new AsyncTask<Void, Void, Void>() {
             @Override

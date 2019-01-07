@@ -3,9 +3,10 @@
 //
 
 #include "JNIStream.h"
+#include "JNIStreamStateDelegateImpl.h"
+#include "JNITSPartLoaderServiceImpl.h"
 #include "Stream.hpp"
 #include "IStreamStateDelegate.hpp"
-#include "ITSPartLoaderService.hpp"
 #include "Log.hpp"
 #include "RawData.hpp"
 #include "JNICore.h"
@@ -16,59 +17,35 @@
 #include <GLES2/gl2.h>
 
 using namespace std;
+using namespace Core;
 using namespace StreamingEngine;
-
-class StreamStateDelegateImpl: public IStreamStateDelegate {
-public:
-    virtual ~StreamStateDelegateImpl() {}
-    virtual void streamStateChanged(StreamState state) {}
-};
-
-class TSPartLoaderServiceImpl: public ITSPartLoaderService {
-public:
-    TSPartLoaderServiceImpl(jobject loader) {
-        auto env = Core::JNICore::getJNIEnv();
-        loader_= env->NewGlobalRef(loader);
-    }
-
-    virtual ~TSPartLoaderServiceImpl() {
-        auto env = Core::JNICore::getJNIEnv();
-        env->DeleteGlobalRef(loader_);
-    }
-
-    virtual void load(TSPartRef tsPart) {
-        auto env = Core::JNICore::getJNIEnv();
-
-        jclass loaderClass = env->GetObjectClass(loader_);
-        jmethodID methodID = env->GetMethodID(loaderClass, "load", "(Ljava/lang/String;I)V");
-
-        jstring url = env->NewStringUTF(tsPart->url().c_str());
-        env->CallVoidMethod(loader_, methodID, url, tsPart->tag());
-
-        Util::Log(Util::Log::Severity::Verbose) << "Load: " << tsPart->tag() << " URL: " << tsPart->url();
-    }
-private:
-    jobject loader_;
-};
 
 static Stream *sStream_ = nullptr;
 
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *env, jclass type, jobject loader) {
-    auto stateDelegate = new StreamStateDelegateImpl();
-    auto loadService = new TSPartLoaderServiceImpl(loader);
+JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *env, jclass type, jobject stateDelegate, jobject loader) {
+    auto stateDelegateImpl = new JNIStreamStateDelegateImpl(stateDelegate);
+    auto loadServiceImpl = new JNITSPartLoaderServiceImpl(loader);
 
     std::vector<TSPartRef> tsParts;
 
     char charBuffer[1024];
-    const char *formatString = "https://nikitasplendo1-euwe.streaming.media.azure.net/125d908d-0b7f-42df-b8c2-cfb956ff37e8/T205523.ism/QualityLevels(720000)/Fragments(video=%i0000000,format=m3u8-aapl-v3,audiotrack=aac_und_2_127_2_1)";
 
-    for (int i = 1; i < 8; i++) {
-        sprintf(charBuffer, formatString, 6 * i);
+    /**
+     * For this playlist qualities are 127000, 380000, 720000, 1150000, 2210000 and 3520000
+     * Video chunks urls are 0, 60000000, 120000000, etc
+     */
+
+    const char *quality = "2210000";
+    const int chunkStep = 6;
+    const char *formatString = "https://nikitasplendo1-euwe.streaming.media.azure.net/125d908d-0b7f-42df-b8c2-cfb956ff37e8/T205523.ism/QualityLevels(%s)/Fragments(video=%i0000000,format=m3u8-aapl-v3,audiotrack=aac_und_2_127_2_1)";
+
+    for (int i = 1; i < 42; i++) {
+        sprintf(charBuffer, formatString, quality, chunkStep * i);
         string url(charBuffer);
         tsParts.push_back(make_shared<TSPart>(i, url, 180, 30));
     }
 
-    sStream_ = new Stream(stateDelegate, loadService, tsParts);
+    sStream_ = new Stream(stateDelegateImpl, loadServiceImpl, tsParts);
     sStream_->start();
 }
 
@@ -77,16 +54,38 @@ JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_deleteStream(JNIEnv *e
     delete sStream_;
 }
 
-JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_getFrame(JNIEnv *env, jclass type, jlong index) {
+JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jlong index, jint textureIDY, jint textureIDU, jint textureIDV) {
     auto frame = sStream_->getFrame(index);
 
-    if (frame != nullptr) {
-        auto yPlane = frame->getPlane(Frame::Plane::Y);
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, frame->getWidth(), frame->getHeight(), 0, GL_ALPHA, GL_UNSIGNED_BYTE, yPlane->getData());
+    if (frame == nullptr) {
+        return false;
     }
 
-    return (frame != nullptr);
+    int width = frame->getWidth();
+    int height = frame->getHeight();
+
+    auto yPlane = frame->getPlane(Frame::Plane::Y);
+    auto uPlane = frame->getPlane(Frame::Plane::U);
+    auto vPlane = frame->getPlane(Frame::Plane::V);
+
+    if ((width == 0) || (height == 0) ||
+        (yPlane == nullptr) || (uPlane == nullptr) || (vPlane == nullptr)) {
+        return false;
+    }
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureIDY);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, yPlane->getData());
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, textureIDU);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width/2, height/2, 0, GL_ALPHA, GL_UNSIGNED_BYTE, uPlane->getData());
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, textureIDV);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width/2, height/2, 0, GL_ALPHA, GL_UNSIGNED_BYTE, vPlane->getData());
+
+    return true;
 }
 
 JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setData(JNIEnv *env, jclass type, jbyteArray data, jint part) {
