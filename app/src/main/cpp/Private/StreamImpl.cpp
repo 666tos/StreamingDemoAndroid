@@ -38,6 +38,8 @@ StreamImpl::StreamImpl(Config *config, IStreamStateDelegate *stateDelegate, ITSP
     tsPartLoaderService_(tsPartLoaderService),
     tsParts_(tsParts) {
 
+    Util::Log::setLogLevel(config_->logLevel_);
+
     alignTSParts();
     initializeFFMpeg();
         
@@ -45,8 +47,6 @@ StreamImpl::StreamImpl(Config *config, IStreamStateDelegate *stateDelegate, ITSP
     tsPartLoader_ = new TSPartLoader(tsPartLoaderService_);
     tsPartWorker_ = new TSPartWorker(tsPartLoader_, this, config_->advanceDownloadStep_);
     decodeWorker_ = new Decode::Worker(this, this);
-    
-    Util::Log::setLogLevel(config_->logLevel_);
 }
 
 StreamImpl::~StreamImpl() {
@@ -83,8 +83,6 @@ void StreamImpl::initializeFFMpeg() {
         av_register_all();
 #pragma GCC diagnostic pop
     }
-    
-    av_log_set_level(config_->ffmpegLogLevel());
 
 #ifdef __ANDROID_HARDWARE_DECODING__
     av_jni_set_java_vm(Core::JNICore::getVM(), NULL);

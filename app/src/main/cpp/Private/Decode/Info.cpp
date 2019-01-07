@@ -130,7 +130,7 @@ AVPixelFormat Info::getFormat(AVCodecContext* context, AVPixelFormat const forma
             
             // Force video toolbox hardware acceleration
             auto result = av_videotoolbox_default_init(context);
-            
+
             if (result < 0) {
                 Util::Log(Util::Log::Severity::Error) << "av_videotoolbox_default_init failed: " << av_err2str(result);
                 return formats[0];

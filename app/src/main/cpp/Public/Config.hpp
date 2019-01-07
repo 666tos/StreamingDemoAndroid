@@ -59,8 +59,6 @@ namespace StreamingEngine {
         Config(int64_t targetBitrate, int64_t framebufferSize, int64_t advanceDownloadStep, int64_t frameIndexTolerance, Util::Log::Severity logLevel);
         
         static Config* defaultConfig();
-        
-        int ffmpegLogLevel() const;
     };
 }
 

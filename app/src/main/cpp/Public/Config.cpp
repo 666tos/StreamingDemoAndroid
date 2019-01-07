@@ -7,10 +7,6 @@
 
 #include "Config.hpp"
 
-extern "C" {
-#include "libavutil/log.h"
-}
-
 using namespace StreamingEngine;
 using namespace StreamingEngine::Util;
 
@@ -25,15 +21,4 @@ Config::Config(int64_t targetBitrate, int64_t framebufferSize, int64_t advanceDo
 
 Config* Config::defaultConfig() {
     return new Config(2000000, 180, 2, 2, Util::Log::Severity::Verbose);
-}
-
-int Config::ffmpegLogLevel() const {
-    switch (logLevel_) {
-        case Log::Severity::Silent:     return AV_LOG_QUIET;
-        case Log::Severity::Error:      return AV_LOG_ERROR;
-        case Log::Severity::Warning:    return AV_LOG_WARNING;
-        case Log::Severity::Info:       return AV_LOG_INFO;
-        case Log::Severity::Verbose:    return AV_LOG_VERBOSE;
-        case Log::Severity::Debugger:   return AV_LOG_DEBUG;
-    }
 }

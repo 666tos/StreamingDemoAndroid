@@ -62,6 +62,16 @@ namespace StreamingEngine {
                 return *this;
             }
 
+            /**
+             * Converts Severity to corresponding FFMpeg log level
+             */
+            static int ffmpegLogLevel();
+
+            /**
+             * Converts FFMpeg log level to corresponding Severity
+             */
+            static Severity logLevelFromFFMpeg(int ffmpegLogLevel);
+
         private:
             static Severity logLevel_;
 
