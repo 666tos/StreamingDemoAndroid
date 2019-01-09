@@ -19,3 +19,6 @@ TODO:
   - Investigate Hardware Acceleration
   https://trac.ffmpeg.org/wiki/HWAccelIntro
   - Merge this repository with https://github.com/TacxDev/Tacx-streaming.git
+  
+Links:
+  - Best JNI practices from IBM: https://www.ibm.com/developerworks/library/j-jni/index.html
