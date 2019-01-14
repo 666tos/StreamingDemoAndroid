@@ -76,7 +76,7 @@ JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_deleteStream(JNIEnv *e
     delete sStream_;
 }
 
-JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jlong index, jint textureIDY, jint textureIDU, jint textureIDV) {
+JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jlong index, jint textureIDY, jint textureIDU, jint textureIDV, jint uTextureAspectRatio) {
     auto frame = sStream_->getFrame(index);
 
     if (frame == nullptr) {
@@ -106,6 +106,9 @@ JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, textureIDV);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width/2, height/2, 0, GL_ALPHA, GL_UNSIGNED_BYTE, vPlane->getData());
+
+    float textureAspectRatio = (float) width / height;
+    glUniform1f(uTextureAspectRatio, textureAspectRatio);
 
     return true;
 }

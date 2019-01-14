@@ -3,16 +3,8 @@ package com.example.tos.streamingdemoandroid;
 import android.app.Activity;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
-import android.view.ViewGroup;
-import android.widget.TextView;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.view.ViewTreeObserver;
 
-import com.example.tos.jni.JNIStream;
 import com.example.tos.stream.StateDelegate;
 import com.example.tos.stream.StreamingCore;
 
@@ -34,6 +26,19 @@ public class MainActivity extends Activity implements Renderer.Delegate, StateDe
         mGLSurfaceView = new GLSurfaceView(this);
         mGLSurfaceView.setEGLContextClientVersion(2);
         mGLSurfaceView.setRenderer(renderer);
+
+        mGLSurfaceView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+
+            @Override
+            public boolean onPreDraw() {
+                mGLSurfaceView.getViewTreeObserver().removeOnPreDrawListener(this);
+
+                renderer.setScreenAspectRatio((float) mGLSurfaceView.getWidth() / mGLSurfaceView.getHeight());
+
+                return true;
+            }
+
+        });
 
         setContentView(mGLSurfaceView);
     }
@@ -58,11 +63,11 @@ public class MainActivity extends Activity implements Renderer.Delegate, StateDe
     // Renderer.Delegate
 
     @Override
-    public void bindFrame(int uPlaneY, int uPlaneU, int uPlaneV) {
+    public void bindFrame(int uPlaneY, int uPlaneU, int uPlaneV, int uTextureAspectRatio) {
         double currentTime = getTime();
         double frameIndex = (currentTime - startTime) * VIDEO_FPS * PLAYBACK_SPEED;
 
-        streamingCore_.bindFrame((int)frameIndex, uPlaneY, uPlaneU, uPlaneV);
+        streamingCore_.bindFrame((int)frameIndex, uPlaneY, uPlaneU, uPlaneV, uTextureAspectRatio);
     }
 
     // StateDelegate

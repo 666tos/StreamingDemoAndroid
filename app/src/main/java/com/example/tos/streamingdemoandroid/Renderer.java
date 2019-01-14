@@ -3,6 +3,7 @@ package com.example.tos.streamingdemoandroid;
 import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.opengl.GLU;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -12,12 +13,14 @@ import javax.microedition.khronos.opengles.GL10;
 
 public class Renderer implements GLSurfaceView.Renderer  {
     public interface Delegate {
-        void bindFrame(int uPlaneY, int uPlaneU, int uPlaneV);
+        void bindFrame(int uPlaneY, int uPlaneU, int uPlaneV, int uTextureAspectRatio);
     }
 
 
     private final Context mActivityContext;
     private final Delegate mDelegate;
+
+    private volatile float mScreenAspectRatio = 1;
 
     float[] mCubeVertexData = {
             1.0f, 1.0f, 0.5f, 0.0f, 0.0f, 1.0f, 1, 1,
@@ -37,10 +40,11 @@ public class Renderer implements GLSurfaceView.Renderer  {
     int inPosition;
     int inNormal;
     int inTexCoord;
-    int uTexture;
     int uPlaneY;
     int uPlaneU;
     int uPlaneV;
+    int uScreenAspectRatio;
+    int uTextureAspectRatio;
 
     public Renderer(final Context activityContext, final Delegate delegate) {
         mActivityContext = activityContext;
@@ -49,7 +53,6 @@ public class Renderer implements GLSurfaceView.Renderer  {
 
     @Override
     public void onSurfaceCreated(GL10 glUnused, javax.microedition.khronos.egl.EGLConfig config) {
-
         vertexBuffer = new int[1];
         GLES20.glGenBuffers(1, vertexBuffer, 0);
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vertexBuffer[0]);
@@ -82,6 +85,9 @@ public class Renderer implements GLSurfaceView.Renderer  {
         uPlaneU = GLES20.glGetUniformLocation(shaderProgram, "_uPlaneU");
         uPlaneV = GLES20.glGetUniformLocation(shaderProgram, "_uPlaneV");
 
+        uScreenAspectRatio = GLES20.glGetUniformLocation(shaderProgram, "_uScreenAspectRatio");
+        uTextureAspectRatio = GLES20.glGetUniformLocation(shaderProgram, "_uTextureAspectRatio");
+
         // Create the texture
         textureIDY = loadTexture();
         textureIDU = loadTexture();
@@ -109,7 +115,6 @@ public class Renderer implements GLSurfaceView.Renderer  {
 
     @Override
     public void onSurfaceChanged(GL10 glUnused, int width, int height) {
-
     }
 
     @Override
@@ -123,10 +128,17 @@ public class Renderer implements GLSurfaceView.Renderer  {
         GLES20.glUniform1i(uPlaneU, 1); // Slot1 - GL_TEXTURE0
         GLES20.glUniform1i(uPlaneV, 2); // Slot2 - GL_TEXTURE0
 
-        mDelegate.bindFrame(textureIDY, textureIDU, textureIDV);
+        GLES20.glUniform1f(uScreenAspectRatio, mScreenAspectRatio);
+
+        mDelegate.bindFrame(textureIDY, textureIDU, textureIDV, uTextureAspectRatio);
 
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vertexBuffer[0]);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6);
         GLES20.glFinish();
     }
+
+    void setScreenAspectRatio(final float aspectRatio) {
+        mScreenAspectRatio = aspectRatio;
+    }
+
 }
