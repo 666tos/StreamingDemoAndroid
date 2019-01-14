@@ -11,7 +11,6 @@ import com.iheartradio.m3u8.data.Playlist;
 import com.iheartradio.m3u8.data.PlaylistData;
 import com.iheartradio.m3u8.data.TrackData;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -32,39 +31,102 @@ class PlaylistParser extends AsyncTask<Void, Void, List<TsPart>> {
 
     @Override
     protected List<TsPart> doInBackground(final Void... params) {
-        URL masterPlaylistUrl = null;
-        try {
-            masterPlaylistUrl = new URL(mPlaylistUrl);
-        } catch (MalformedURLException ignore) {
-        }
-
-        if (masterPlaylistUrl == null) {
+        final PlaylistData mediaPlaylistData = findMediaPlaylist(mPlaylistUrl, mTargetBitrate);
+        if (mediaPlaylistData == null) {
             return null;
         }
 
-        InputStream inputStream = null;
-        try {
-            inputStream = masterPlaylistUrl.openStream();
-        } catch (IOException ignore) {
-        }
+        final String mediaPlaylistUrlSpec = getUrlFromManifest(mPlaylistUrl, mediaPlaylistData.getUri());
+        final List<TsPart> tsPartList = getParts(mediaPlaylistUrlSpec);
 
-        if (inputStream == null) {
+        return tsPartList;
+    }
+
+    private PlaylistData findMediaPlaylist(final String masterPlaylistSpec, final int targetBitrate) {
+        final Playlist playlist = getPlaylist(masterPlaylistSpec);
+        final MasterPlaylist masterPlaylist = getMasterPlaylist(playlist);
+        if (masterPlaylist == null) {
             return null;
         }
 
-        final com.iheartradio.m3u8.PlaylistParser masterPlaylistParser = new com.iheartradio.m3u8.PlaylistParser(inputStream, Format.EXT_M3U, Encoding.UTF_8);
-        Playlist playlist = null;
-        try {
-            playlist = masterPlaylistParser.parse();
-        } catch (Exception ignore) {
+        final List<PlaylistData> playlistData = sortPlaylistsByBandwidth(masterPlaylist.getPlaylists());
+        PlaylistData mediaPlaylistData = playlistData.get(playlistData.size() - 1);
+        for (PlaylistData playlistDataItem: playlistData) {
+            if (playlistDataItem.getStreamInfo().getBandwidth() > targetBitrate) {
+                mediaPlaylistData = playlistDataItem;
+
+                break;
+            }
         }
 
+        return mediaPlaylistData;
+    }
+
+    private MasterPlaylist getMasterPlaylist(final Playlist playlist) {
         if (playlist == null || !playlist.hasMasterPlaylist()) {
             return null;
         }
 
-        final MasterPlaylist masterPlaylist = playlist.getMasterPlaylist();
-        final List<PlaylistData> playlistData = new ArrayList<>(masterPlaylist.getPlaylists());
+        return playlist.getMasterPlaylist();
+    }
+
+    private MediaPlaylist getMediaPlaylist(final Playlist playlist) {
+        if (playlist == null || !playlist.hasMediaPlaylist()) {
+            return null;
+        }
+
+        return playlist.getMediaPlaylist();
+    }
+
+    private List<TsPart> getParts(final String mediaPlaylistUrlSpec) {
+        final Playlist playlist = getPlaylist(mediaPlaylistUrlSpec);
+        final MediaPlaylist mediaPlaylist = getMediaPlaylist(playlist);
+        int index = 1;
+        final List<TsPart> tsPartList = new ArrayList<>(mediaPlaylist.getTracks().size());
+        for (TrackData trackData : mediaPlaylist.getTracks()) {
+            tsPartList.add(new TsPart(index++, trackData.getTrackInfo().duration, getUrlFromManifest(mediaPlaylistUrlSpec, trackData.getUri())));
+        }
+
+        return tsPartList;
+    }
+
+    private Playlist getPlaylist(final String playlistUrlSpec) {
+        if (playlistUrlSpec == null) {
+            return null;
+        }
+
+        URL playlistUrl = null;
+        try {
+            playlistUrl = new URL(playlistUrlSpec);
+        } catch (MalformedURLException ignore) {
+        }
+
+        if (playlistUrl == null) {
+            return null;
+        }
+
+        Playlist playlist = null;
+        try (InputStream inputStream = playlistUrl.openStream()) {
+            final com.iheartradio.m3u8.PlaylistParser playlistParser = new com.iheartradio.m3u8.PlaylistParser(inputStream, Format.EXT_M3U, Encoding.UTF_8);
+            playlist = playlistParser.parse();
+        } catch (Exception ignore) {
+        }
+
+        return playlist;
+    }
+
+    private String getUrlFromManifest(final String manifest, final String lastPathSegment) {
+        final Uri manifestUri = Uri.parse(manifest);
+        final String manifestLastPathSegment = manifestUri.getLastPathSegment();
+        if (manifestLastPathSegment == null) {
+            return null;
+        }
+
+        return manifest.replace(manifestLastPathSegment, lastPathSegment);
+    }
+
+    private List<PlaylistData> sortPlaylistsByBandwidth(final List<PlaylistData> playlists) {
+        final List<PlaylistData> playlistData = new ArrayList<>(playlists);
         Collections.sort(playlistData, new Comparator<PlaylistData>() {
 
             @Override
@@ -74,66 +136,7 @@ class PlaylistParser extends AsyncTask<Void, Void, List<TsPart>> {
 
         });
 
-        PlaylistData mediaPlaylistData = null;
-        for (PlaylistData playlistDataItem: playlistData) {
-            if (playlistDataItem.getStreamInfo().getBandwidth() > mTargetBitrate) {
-                mediaPlaylistData = playlistDataItem;
-
-                break;
-            }
-        }
-
-        if (mediaPlaylistData == null) {
-            return null;
-        }
-
-        try {
-            inputStream.close();
-            inputStream = null;
-        } catch (IOException ignore) {
-        }
-
-        URL mediaPlaylistUrl = null;
-        try {
-            final String url = masterPlaylistUrl.toString();
-            final Uri uri = Uri.parse(url);
-            mediaPlaylistUrl = new URL(url.replace(uri.getLastPathSegment(), "") + mediaPlaylistData.getUri());
-        } catch (MalformedURLException ignore) {
-        }
-
-        if (mediaPlaylistUrl == null) {
-            return null;
-        }
-
-        try {
-            inputStream = mediaPlaylistUrl.openStream();
-        } catch (IOException ignore) {
-        }
-
-        if (inputStream == null) {
-            return null;
-        }
-
-        final com.iheartradio.m3u8.PlaylistParser mediaPlaylistParser = new com.iheartradio.m3u8.PlaylistParser(inputStream, Format.EXT_M3U, Encoding.UTF_8);
-        try {
-            playlist = mediaPlaylistParser.parse();
-        } catch (Exception ignore) {
-        }
-
-        if (playlist == null || !playlist.hasMediaPlaylist()) {
-            return null;
-        }
-
-        final MediaPlaylist mediaPlaylist = playlist.getMediaPlaylist();
-        int index = 1;
-        final List<TsPart> tsPartList = new ArrayList<>(mediaPlaylist.getTracks().size());
-        for (TrackData trackData : mediaPlaylist.getTracks()) {
-            final String url = mediaPlaylistUrl.toString();
-            final Uri uri = Uri.parse(url);
-            tsPartList.add(new TsPart(index++, trackData.getTrackInfo().duration, url.replace(uri.getLastPathSegment(), trackData.getUri())));
-        }
-
-        return tsPartList;
+        return playlistData;
     }
 
 }
