@@ -50,7 +50,7 @@ namespace StreamingEngine {
         
         int64_t currentTSPartIndex_ = -1;
         
-        int64_t targetFrameIndex_ = 0;
+        Timestamp targetTimestamp_;
         
         IStreamStateDelegate *stateDelegate_;
         ITSPartLoaderService *tsPartLoaderService_;
@@ -64,19 +64,19 @@ namespace StreamingEngine {
         
         // StreamFrameAccessor
         virtual bool hasFramesCacheCapacity() const;
-        virtual int64_t targetFrameIndex() const;
+        virtual Timestamp targetTimestamp() const;
         
         // WorkerDelegate
-        virtual void addFrame(AVFrame *avframe, int64_t index);
+        virtual void addFrame(AVFrame *avframe, const Timestamp& timestamp);
         
         // TSPartWorkerDelegate
         virtual TSPartRef getPart();
         virtual TSPartRef nextPart(TSPartRef tsPart);
         
-        void determineCurrentTSPart(int64_t frameIndex);
+        void determineCurrentTSPart(const Timestamp& timestamp);
         void setCurrentTSPartIndex(int64_t tsPartIndex);
         TSPartRef findNextPart(TSPartRef tsPart);
-        FrameRef findFrame(int64_t index);
+        FrameRef findFrame(const Timestamp& timestamp);
         
     public:
         // StreamStateProvider
@@ -87,7 +87,7 @@ namespace StreamingEngine {
         void setData(RawData *rawData, int64_t part);
         
         int64_t targetBitrate();
-        FrameRef getFrame(int64_t index);
+        FrameRef getFrame(double timestamp);
         
         void start();
         void stop();

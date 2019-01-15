@@ -42,8 +42,8 @@ int64_t Stream::targetBitrate() {
     return impl_->targetBitrate();
 }
 
-FrameRef Stream::getFrame(int64_t index) {
-    return impl_->getFrame(index);
+FrameRef Stream::getFrame(double timestamp) {
+    return impl_->getFrame(timestamp);
 }
 
 void Stream::start() {

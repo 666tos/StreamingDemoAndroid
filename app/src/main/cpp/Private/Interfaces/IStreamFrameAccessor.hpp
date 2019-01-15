@@ -10,6 +10,7 @@
 #define IStreamFrameAccessor_hpp
 
 #include "IStreamStateAccessor.hpp"
+#include "Timestamp.hpp"
 #include <cstdint>
 #include <unistd.h>
 
@@ -17,7 +18,7 @@ namespace StreamingEngine {
     class IStreamFrameAccessor: public IStreamStateAccessor {
     public:
         virtual bool hasFramesCacheCapacity() const = 0;
-        virtual int64_t targetFrameIndex() const = 0;
+        virtual Timestamp targetTimestamp() const = 0;
     };
 }
 

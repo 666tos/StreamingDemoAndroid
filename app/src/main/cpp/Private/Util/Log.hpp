@@ -32,6 +32,11 @@ namespace StreamingEngine {
              * Sets minimal severity that's displayed
              */
             static void setLogLevel(Severity logLevel);
+            
+            /**
+             * Gets minimal severity that's displayed
+             */
+            static Severity logLevel();
 
             /**
              *  Default c-tor

@@ -23,8 +23,9 @@ using namespace std;
 using namespace StreamingEngine;
 using namespace StreamingEngine::Decode;
 
-Info::Info():
- frame_(av_frame_alloc()) {
+Info::Info(Config *config):
+    config_(config),
+    frame_(av_frame_alloc()) {
      
 }
 
@@ -45,12 +46,10 @@ void Info::determineFormat(RawDataRef rawData, AVIOContext *ioContext) {
     prepareForReading();
 }
 
-int64_t Info::calculatePTS(int64_t pts) {
+Timestamp Info::calculateTimestamp(int64_t pts) {
     double result = (pts != AV_NOPTS_VALUE) ? pts - ptsStart_ : 0;
-
-    // TODO: replace 30 with actual FPS
-    result *= 30.0 * av_q2d(timeBase_);
-    return result;
+    result *= av_q2d(timeBase_);
+    return Timestamp(result, config_->frameTimestampDelta_);
 }
 
 #pragma mark -
@@ -100,7 +99,7 @@ bool Info::prepareForReading() {
 #ifdef __IOS_HARDWARE_DECODING__
     codecContext->get_format = Info::getFormat;
 #endif
-
+    
     if (!canOpenCodec(videoCodec, codecContext)) {
         avcodec_free_context(&codecContext);
         return false;
@@ -130,7 +129,7 @@ AVPixelFormat Info::getFormat(AVCodecContext* context, AVPixelFormat const forma
             
             // Force video toolbox hardware acceleration
             auto result = av_videotoolbox_default_init(context);
-
+            
             if (result < 0) {
                 Util::Log(Util::Log::Severity::Error) << "av_videotoolbox_default_init failed: " << av_err2str(result);
                 return formats[0];

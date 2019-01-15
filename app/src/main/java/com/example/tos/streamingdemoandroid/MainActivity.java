@@ -8,15 +8,16 @@ import android.view.ViewTreeObserver;
 import com.example.tos.stream.StateDelegate;
 import com.example.tos.stream.StreamingCore;
 
+import java.util.concurrent.TimeUnit;
+
 public class MainActivity extends Activity implements Renderer.Delegate, StateDelegate {
 
+    private static final double PLAYBACK_SPEED = 1.2;
+
+    private final StreamingCore mStreamingCore = new StreamingCore(this);
+
     private GLSurfaceView mGLSurfaceView;
-
-    final double VIDEO_FPS = 30;
-    final double PLAYBACK_SPEED = 2.0;
-    double startTime = 0;
-
-    StreamingCore streamingCore_ = new StreamingCore(this);
+    private long mStartTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +49,7 @@ public class MainActivity extends Activity implements Renderer.Delegate, StateDe
         // The activity must call the GL surface view's onResume() on activity onResume().
         super.onResume();
 
-        startTime = getTime();
+        mStartTime = getTime();
 
         mGLSurfaceView.onResume();
     }
@@ -64,10 +65,11 @@ public class MainActivity extends Activity implements Renderer.Delegate, StateDe
 
     @Override
     public void bindFrame(int uPlaneY, int uPlaneU, int uPlaneV, int uTextureAspectRatio) {
-        double currentTime = getTime();
-        double frameIndex = (currentTime - startTime) * VIDEO_FPS * PLAYBACK_SPEED;
+        final long currentTime = getTime();
+        final double seconds = (double) (currentTime - mStartTime) / 1000;
+        final double frameTimestamp = seconds * PLAYBACK_SPEED;
 
-        streamingCore_.bindFrame((int)frameIndex, uPlaneY, uPlaneU, uPlaneV, uTextureAspectRatio);
+        mStreamingCore.bindFrame(frameTimestamp, uPlaneY, uPlaneU, uPlaneV, uTextureAspectRatio);
     }
 
     // StateDelegate
@@ -77,7 +79,8 @@ public class MainActivity extends Activity implements Renderer.Delegate, StateDe
         final StreamState streamState = StreamState.fromInt(state);
     }
 
-    private double getTime() {
-        return (double) System.currentTimeMillis()/1000;
+    private long getTime() {
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime());
     }
+
 }

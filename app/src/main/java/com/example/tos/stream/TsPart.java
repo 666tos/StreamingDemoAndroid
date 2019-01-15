@@ -2,28 +2,22 @@ package com.example.tos.stream;
 
 public class TsPart {
 
-    private final int mFps;
+    private final double mDuration;
     private final int mIndex;
-    private final int mNumberOfFrames;
     private final String mUrl;
 
-    TsPart(final int index, final float duration, final String url) {
-        mFps = 30;
+    TsPart(final int index, final double duration, final String url) {
+        mDuration = duration;
         mIndex = index;
-        mNumberOfFrames = (int) duration * mFps;
         mUrl = url;
     }
 
-    public int getFps() {
-        return mFps;
+    public double getDuration() {
+        return mDuration;
     }
 
     public int getIndex() {
         return mIndex;
-    }
-
-    public int getNumberOfFrames() {
-        return mNumberOfFrames;
     }
 
     public String getUrl() {

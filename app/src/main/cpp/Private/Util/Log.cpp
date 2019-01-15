@@ -30,6 +30,10 @@ void Log::setLogLevel(Severity logLevel) {
     av_log_set_callback(logCallback);
 }
 
+Log::Severity Log::logLevel() {
+    return logLevel_;
+}
+
 Log::Log(Severity severity):
     severity_(severity) {
 }
@@ -59,7 +63,7 @@ Log::Severity Log::logLevelFromFFMpeg(int ffmpegLogLevel) {
         case AV_LOG_DEBUG:      return Log::Severity::Debugger;
     }
 
-    return Log::Severity::Silent;
+    return Log::Severity::Debugger;
 }
 
 void Log::flush() {
@@ -109,9 +113,18 @@ int Log::androidLogLevel() {
 
 extern "C" {
 static void logCallback(void *ptr, int level, const char *fmt, va_list vargs) {
-    char *stringBuffer = nullptr;
-    vasprintf(&stringBuffer, fmt, vargs);
-    Log(Log::logLevelFromFFMpeg(level)) << "[FFMpeg] " << stringBuffer;
-    free(stringBuffer);
+    Log::Severity severity = Log::logLevelFromFFMpeg(level);
+    
+    /**
+     * This check duplicates one in << operator.
+     * It's needed to avoid unnecessary call to vasprintf (which is allocating buffers for strings)
+     */
+    
+    if (severity <= Log::logLevel()) {
+        char *stringBuffer = nullptr;
+        vasprintf(&stringBuffer, fmt, vargs);
+        Log(Log::logLevelFromFFMpeg(level)) << "[FFMpeg] " << stringBuffer;
+        free(stringBuffer);
+    }
 }
 }

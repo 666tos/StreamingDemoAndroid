@@ -12,6 +12,7 @@
 #include <memory>
 #include "RawData.hpp"
 #include "Config.hpp"
+#include "Timestamp.hpp"
 
 extern "C" {
 #include "libavutil/rational.h"
@@ -44,6 +45,7 @@ namespace StreamingEngine {
         #endif
             
         public:
+            Config *config_;
             AVFrame *frame_;
             AVInputFormat *inputFormat_ = nullptr;
             AVCodecContext *codecContext_ = nullptr;
@@ -54,11 +56,11 @@ namespace StreamingEngine {
             int64_t ptsStart_ = 0;
             AVRational timeBase_;
             
-            Info();
+            Info(Config *config);
             ~Info();
             
             void determineFormat(RawDataRef rawData, AVIOContext *ioContext);
-            int64_t calculatePTS(int64_t pts);
+            Timestamp calculateTimestamp(int64_t pts);
         };
     }
 }

@@ -30,6 +30,8 @@ struct AVPacket;
 struct AVFrame;
 
 namespace StreamingEngine {
+    class Config;
+    
     namespace Decode {
         class Info;
         class FrameReader;
@@ -52,7 +54,7 @@ namespace StreamingEngine {
             virtual void getNextData();
             
         public:
-            Worker(IStreamFrameAccessor *streamFrameAccessor, IWorkerDelegate *delegate);
+            Worker(Config *config, IStreamFrameAccessor *streamFrameAccessor, IWorkerDelegate *delegate);
             ~Worker();
             
             void addTask(WorkerTask *task);

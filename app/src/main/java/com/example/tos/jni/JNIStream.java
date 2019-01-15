@@ -10,7 +10,7 @@ public class JNIStream {
     static public native void createStream(List<TsPart> tsPartList, int tsPartListSize, StateDelegate stateDelegate, Loader loader);
     static public native void deleteStream();
 
-    static public native boolean bindFrame(long index, int textureIDY, int textureIDU, int textureIDV, int uTextureAspectRatio);
+    static public native boolean bindFrame(double timestamp, int textureIDY, int textureIDU, int textureIDV, int uTextureAspectRatio);
 
     static public native void setData(byte data[], int part);
 

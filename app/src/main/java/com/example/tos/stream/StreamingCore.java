@@ -23,8 +23,8 @@ public class StreamingCore {
         }
     }
 
-    public boolean bindFrame(long index, int uPlaneY, int uPlaneU, int uPlaneV, int uTextureAspectRatio) {
-        return JNIStream.bindFrame(index, uPlaneY, uPlaneU, uPlaneV, uTextureAspectRatio);
+    public boolean bindFrame(double timestamp, int uPlaneY, int uPlaneU, int uPlaneV, int uTextureAspectRatio) {
+        return JNIStream.bindFrame(timestamp, uPlaneY, uPlaneU, uPlaneV, uTextureAspectRatio);
     }
 
     public void setData(byte data[], int part) {

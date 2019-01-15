@@ -14,6 +14,7 @@
 #include "Frame.hpp"
 #include "Config.hpp"
 #include "TSPart.hpp"
+#include "Timestamp.hpp"
 
 extern "C" {
 #include "StreamState.h"
@@ -47,11 +48,11 @@ namespace StreamingEngine {
         int64_t targetBitrate();
         
         /**
-         * Gets frame for requested index.
-         * All frames before @index are cleared.
+         * Gets frame for requested timestamp.
+         * All frames before @timestamp are cleared.
          * If frame not cached, stream state changes to StreamStateBuffering.
          */
-        FrameRef getFrame(int64_t index);
+        FrameRef getFrame(double timestamp);
         
         /**
          * Sets state to StreamStateBuffering, allowing workers to start decode if possible.

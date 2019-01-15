@@ -9,6 +9,7 @@
 #define FrameFactory_hpp
 
 #import "Frame.hpp"
+#import "Timestamp.hpp"
 
 #import <vector>
 
@@ -52,13 +53,13 @@ namespace StreamingEngine {
          * Does not use @config_->framebufferSize_, so total numbers of frames may exceed that value.
          */
         
-        void createFrame(AVFrame *avframe, int64_t index);
+        void createFrame(AVFrame *avframe, const Timestamp& timestamp);
         
         /**
-         * Looks for a frame with given @index, discarding older frames.
+         * Looks for a frame with given @timestamp, discarding older frames.
          * See implementation for details.
          */
-        FrameRef findFrame(int64_t index);
+        FrameRef findFrame(const Timestamp& timestamp);
 
         /**
          * Moves all @usedFrames_ to @freeFrames_.

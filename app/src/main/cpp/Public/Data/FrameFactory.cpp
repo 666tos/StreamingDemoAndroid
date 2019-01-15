@@ -6,6 +6,7 @@
 //
 
 #include "FrameFactory.hpp"
+#include "Utils.hpp"
 #include <memory>
 
 using namespace std;
@@ -20,7 +21,7 @@ FrameFactory::~FrameFactory() {
     
 }
 
-void FrameFactory::createFrame(AVFrame *avframe, int64_t index) {
+void FrameFactory::createFrame(AVFrame *avframe, const Timestamp& timestamp) {
     freeFramesMutex_.lock();
     
     auto it = freeFrames_.begin();
@@ -28,11 +29,11 @@ void FrameFactory::createFrame(AVFrame *avframe, int64_t index) {
     
     if (it != freeFrames_.end()) {
         frame = *it;
-        frame->setFrame(avframe, index);
+        frame->setFrame(avframe, timestamp);
         freeFrames_.erase(it);
     }
     else {
-        frame = make_shared<Frame>(avframe, index);
+        frame = make_shared<Frame>(avframe, timestamp);
     }
     
     freeFramesMutex_.unlock();
@@ -40,7 +41,7 @@ void FrameFactory::createFrame(AVFrame *avframe, int64_t index) {
     useFrame(frame);
 }
 
-FrameRef FrameFactory::findFrame(int64_t index) {
+FrameRef FrameFactory::findFrame(const Timestamp& timestamp) {
     usedFramesMutex_.lock();
     
     FrameRef resultFrame = nullptr;
@@ -48,30 +49,30 @@ FrameRef FrameFactory::findFrame(int64_t index) {
     for (auto it = usedFrames_.begin(); it != usedFrames_.end(); ) {
         auto frame = *it;
         
-        if (frame->getIndex() < index) {
+        if (frame->getTimestamp() < timestamp) {
             /**
-             * @frame's index is smaller than @index requested.
+             * @frame's timestamp is smaller than @timestamp requested.
              * @frame is not needed anymore and can be deleted.
              */
             
             reuseFrame(*it);
             it = usedFrames_.erase(it);
         }
-        else if (frame->getIndex() == index) {
+        else if (frame->getTimestamp() == timestamp) {
             /**
-             * Happy case, @frame's index equals to @index requested.
+             * Happy case, @frame's timestamp equals to @timestamp requested.
              */
             
             resultFrame = frame;
             break;
-        } else if (frame->getIndex() < index + config_->frameIndexTolerance_) {
+        } else if (Timestamp::approximatelyEqual(frame->getTimestamp(), timestamp, config_->frameTimestampDelta_)) {
             /**
-             * Corner case, @frame's index is greater than @index requested.
-             * This means that frame with @index was not decoded, but the next one was.
-             * Checking how far is @frame's index from @index - if it's not too far, return @frame.
+             * Corner case, @frame's timestamp is greater than @timestamp requested.
+             * This means that frame with @timestamp was not decoded, but the next one was.
+             * Checking how far is @frame's timestamp from @timestamp - if it's not too far, return @frame.
              */
             
-            Util::Log(Util::Log::Severity::Warning) << "[Find Frame] Requested frame: " << index << " but only found frame: " << frame->getIndex();
+            Util::Log(Util::Log::Severity::Warning) << "[Find Frame] Requested frame: " << timestamp << " but only found frame: " << frame->getTimestamp();
             resultFrame = frame;
             break;
         } else {

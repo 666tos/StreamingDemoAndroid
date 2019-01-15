@@ -21,8 +21,8 @@ extern "C" {
 using namespace std;
 using namespace StreamingEngine;
 
-Frame::Frame(AVFrame* frame, int64_t index) {
-    setFrame(frame, index);
+Frame::Frame(AVFrame* frame, const Timestamp& timestamp) {
+    setFrame(frame, timestamp);
 }
 
 Frame::~Frame() {
@@ -31,8 +31,8 @@ Frame::~Frame() {
     }
 }
 
-void Frame::setFrame(AVFrame* frame, int64_t index) {
-    index_ = index;
+void Frame::setFrame(AVFrame* frame, const Timestamp& timestamp) {
+    timestamp_ = timestamp;
     width_ = frame->width;
     height_= frame->height;
     
@@ -43,8 +43,8 @@ void Frame::setFrame(AVFrame* frame, int64_t index) {
 #endif
 }
 
-int64_t Frame::getIndex() {
-    return index_;
+const Timestamp& Frame::getTimestamp() {
+    return timestamp_;
 }
 
 int Frame::getWidth() {

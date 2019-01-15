@@ -8,8 +8,10 @@
 #ifndef Frame_hpp
 #define Frame_hpp
 
-#include <memory>
 #include "Config.hpp"
+#include "Timestamp.hpp"
+
+#include <memory>
 
 struct AVFrame;
 
@@ -27,11 +29,11 @@ namespace StreamingEngine {
             Count
         };
         
-        Frame(AVFrame* frame, int64_t index);
+        Frame(AVFrame* frame, const Timestamp& timestamp);
         ~Frame();
         
-        void setFrame(AVFrame* frame, int64_t index);
-        int64_t getIndex();
+        void setFrame(AVFrame* frame, const Timestamp& timestamp);
+        const Timestamp& getTimestamp();
         
         int getWidth();
         int getHeight();
@@ -41,7 +43,7 @@ namespace StreamingEngine {
     private:
         RawData *planes_[static_cast<int>(Plane::Count)] = { nullptr };
         
-        int64_t index_;
+        Timestamp timestamp_ = Timestamp::zero;
         int width_;
         int height_;
         

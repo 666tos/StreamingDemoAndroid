@@ -10,6 +10,7 @@
 #include "Frame.hpp"
 #include "FrameReader.hpp"
 #include "Log.hpp"
+#include "Config.hpp"
 
 #include <unistd.h>
 
@@ -21,12 +22,12 @@ using namespace std;
 using namespace StreamingEngine;
 using namespace StreamingEngine::Decode;
 
-Worker::Worker(IStreamFrameAccessor *streamFrameAccessor, IWorkerDelegate *delegate):
+Worker::Worker(Config *config, IStreamFrameAccessor *streamFrameAccessor, IWorkerDelegate *delegate):
     streamFrameAccessor_(streamFrameAccessor),
     delegate_(delegate) {
 
     frameReader_ = new FrameReader(streamFrameAccessor, delegate);
-    decodeInfo_ = new Info();
+    decodeInfo_ = new Info(config);
         
     streamDataProvider_ = new InputStreamDataProvider(this);
     streamDataProvider_->delegate_ = this;
@@ -94,8 +95,8 @@ void Worker::run() {
             if (decodeInfo_->inputFormat_) {
                 while (streamFrameAccessor_->hasFramesCacheCapacity()) {
                     if (AVFrame *avFrame = frameReader_->readFrame(decodeInfo_)) {
-                        int64_t index = decodeInfo_->calculatePTS(avFrame->pts);
-                        delegate_->addFrame(avFrame, index);
+                        Timestamp timestamp = decodeInfo_->calculateTimestamp(avFrame->pts);
+                        delegate_->addFrame(avFrame, timestamp);
                     }
                     else {
                         break;

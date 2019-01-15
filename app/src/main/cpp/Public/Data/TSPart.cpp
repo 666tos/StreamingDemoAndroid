@@ -16,12 +16,10 @@ using namespace StreamingEngine;
 #pragma mark -
 #pragma mark Public
 
-TSPart::TSPart(int64_t tag, std::string url, int64_t numberOfFrames, uint32_t fps):
+TSPart::TSPart(int64_t tag, std::string url, double duration):
     tag_(tag),
     url_(url),
-    fps_(fps),
-    numberOfFrames_(numberOfFrames),
-    frameOffset_(0) {
+    timeRange_(Timestamp::zero, duration) {
     
 }
 
@@ -37,8 +35,8 @@ void TSPart::markAsLoaded() {
     state_ = TSPartState::Loaded;
 }
 
-void TSPart::setFrameOffset(int64_t frameOffset) {
-    frameOffset_ = frameOffset;
+void TSPart::setStartTime(const Timestamp& startTime) {
+    timeRange_.setStart(startTime);
 }
 
 #pragma mark -
@@ -48,7 +46,7 @@ TSPartState TSPart::state() {
     return state_;
 }
 
-std::string TSPart::url() {
+const std::string& TSPart::url() {
     return url_;
 }
 
@@ -56,14 +54,6 @@ int64_t TSPart::tag() {
     return tag_;
 }
 
-int64_t TSPart::numberOfFrames() {
-    return numberOfFrames_;
-}
-
-int64_t TSPart::frameOffset() {
-    return frameOffset_;
-}
-
-int64_t TSPart::maxFrame() {
-    return frameOffset_ + numberOfFrames_;
+const TimeRange& TSPart::timeRange() const {
+    return timeRange_;
 }

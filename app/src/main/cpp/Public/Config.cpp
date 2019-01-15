@@ -10,15 +10,19 @@
 using namespace StreamingEngine;
 using namespace StreamingEngine::Util;
 
-Config::Config(int64_t targetBitrate, int64_t framebufferSize, int64_t advanceDownloadStep, int64_t frameIndexTolerance, Util::Log::Severity logLevel):
+Config::Config(int64_t targetBitrate, int64_t framebufferSize, int64_t advanceDownloadStep,
+               double frameTimestampTolerance, double frameTimestampDelta, Util::Log::Severity logLevel):
     targetBitrate_(targetBitrate),
     framebufferSize_(framebufferSize),
     advanceDownloadStep_(advanceDownloadStep),
-    frameIndexTolerance_(frameIndexTolerance),
+    frameTimestampTolerance_(frameTimestampTolerance),
+    frameTimestampDelta_(frameTimestampDelta),
     logLevel_(logLevel) {
     
 }
 
 Config* Config::defaultConfig() {
-    return new Config(2000000, 180, 2, 2, Util::Log::Severity::Verbose);
+    return new Config(2000000, 180, 2,
+                      3.0 * 1.0/30.0, 0.5 * 1.0/30.0,
+                      Util::Log::Severity::Verbose);
 }

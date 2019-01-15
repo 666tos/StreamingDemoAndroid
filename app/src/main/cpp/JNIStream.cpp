@@ -28,44 +28,26 @@ JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *e
 
     std::vector<TSPartRef> tsParts;
 
-    //char charBuffer[1024];
-
-    /**
-     * For this playlist qualities are 127000, 380000, 720000, 1150000, 2210000 and 3520000
-     * Video chunks urls are 0, 60000000, 120000000, etc
-     */
-
-    /*const char *quality = "2210000";
-    const int chunkStep = 6;
-    const char *formatString = "https://nikitasplendo1-euwe.streaming.media.azure.net/125d908d-0b7f-42df-b8c2-cfb956ff37e8/T205523.ism/QualityLevels(%s)/Fragments(video=%i0000000,format=m3u8-aapl-v3,audiotrack=aac_und_2_127_2_1)";*/
-
     jclass listClass = env->GetObjectClass(tsPartList);
     jmethodID getMethodID = env->GetMethodID(listClass, "get", "(I)Ljava/lang/Object;");
     jobject tsPart;
     for (int i = 0; i < tsPartListSize; i++) {
         tsPart = env->CallObjectMethod(tsPartList, getMethodID, i);
         jclass tsPartClass = env->GetObjectClass(tsPart);
-        jmethodID getFpsMethodID = env->GetMethodID(tsPartClass, "getFps", "()I");
+        jmethodID getDurationMethodID = env->GetMethodID(tsPartClass, "getDuration", "()D");
         jmethodID getIndexMethodID = env->GetMethodID(tsPartClass, "getIndex", "()I");
-        jmethodID getNumberOfFramesMethodID = env->GetMethodID(tsPartClass, "getNumberOfFrames", "()I");
         jmethodID getUrlMethodID = env->GetMethodID(tsPartClass, "getUrl", "()Ljava/lang/String;");
         const char *str = env->GetStringUTFChars(static_cast<jstring>(env->CallObjectMethod(tsPart, getUrlMethodID)), NULL);
         string url(str);
+        //env->R
 
         Util::Log(Util::Log::Severity::Debugger) << url;
 
         tsParts.push_back(make_shared<TSPart>(
                 env->CallIntMethod(tsPart, getIndexMethodID),
                 url,
-                env->CallIntMethod(tsPart, getNumberOfFramesMethodID),
-                env->CallIntMethod(tsPart, getFpsMethodID)));
+                env->CallDoubleMethod(tsPart, getDurationMethodID)));
     }
-
-    /*for (int i = 1; i < 42; i++) {
-        sprintf(charBuffer, formatString, quality, chunkStep * i);
-        string url(charBuffer);
-        tsParts.push_back(make_shared<TSPart>(i, url, 180, 30));
-    }*/
 
     sStream_ = new Stream(stateDelegateImpl, loadServiceImpl, tsParts);
     sStream_->start();
@@ -76,8 +58,8 @@ JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_deleteStream(JNIEnv *e
     delete sStream_;
 }
 
-JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jlong index, jint textureIDY, jint textureIDU, jint textureIDV, jint uTextureAspectRatio) {
-    auto frame = sStream_->getFrame(index);
+JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jdouble timestamp, jint textureIDY, jint textureIDU, jint textureIDV, jint uTextureAspectRatio) {
+    auto frame = sStream_->getFrame(timestamp);
 
     if (frame == nullptr) {
         return false;

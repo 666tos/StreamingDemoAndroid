@@ -7,11 +7,14 @@
 
 #include "Utils.hpp"
 
-#ifdef __IOS_HARDWARE_DECODING__
-
 #include <unistd.h>
 #include <math.h>
+
+#ifdef __IOS_HARDWARE_DECODING__
+
 #include <mach/mach.h>
+
+#endif
 
 using namespace StreamingEngine;
 
@@ -20,6 +23,12 @@ size_t Utils::ceilToMultiple(size_t value, size_t multiple) {
     const auto iratio = ceil(ratio);
     return iratio * multiple;
 }
+
+bool Utils::approximatelyEqual(double a, double b, double epsilon) {
+    return fabs(a - b) < epsilon;
+}
+
+#ifdef __IOS_HARDWARE_DECODING__
 
 size_t Utils::ceilToPageSize(size_t value) {
     size_t pageSize = getpagesize();

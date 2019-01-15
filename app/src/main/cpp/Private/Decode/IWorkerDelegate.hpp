@@ -9,6 +9,8 @@
 #ifndef IWorkerDelegate_hpp
 #define IWorkerDelegate_hpp
 
+#include "Timestamp.hpp"
+
 struct AVCodec;
 struct AVFrame;
 
@@ -16,7 +18,7 @@ namespace StreamingEngine {
     namespace Decode {
         class IWorkerDelegate {
         public:
-            virtual void addFrame(AVFrame *frame, int64_t index) = 0;
+            virtual void addFrame(AVFrame *frame, const Timestamp &timestamp) = 0;
         };
     }
 }

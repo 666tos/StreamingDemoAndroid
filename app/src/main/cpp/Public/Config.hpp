@@ -45,18 +45,26 @@ namespace StreamingEngine {
         const int64_t advanceDownloadStep_;
         
         /**
-         * Sets delta of frame index of comparison, if frame in the middle of the stream was not decoded.
-         * - 0 means only matching frame index precisely.
-         * - N means trying to match frames in range [X + 1 ... X + frameIndexTolerance_], where X is currently requested frame index.
+         * Sets delta of frame timestamp comparison, if frame in the middle of the stream was not decoded.
+         * - 0 means only matching frame timestamp precisely (using frameTimestampDelta_).
+         * - N means trying to match frames in range [X - frameTimestampDelta_ ... X + frameTimestampTolerance_], where X is currently requested timestamp.
          */
-        const int64_t frameIndexTolerance_;
+        const double frameTimestampTolerance_;
+        
+        /**
+         * Sets delta of frame timestamp of comparison.
+         * - 0 means only matching frame timestamp precisely, and should never be used since floats are hard to be equal.
+         * - N means trying to match frames in range [X -frameTimestampDelta_ ... X + frameTimestampDelta_], where X is currently requested timestamp.
+         */
+        const double frameTimestampDelta_;
         
         /**
          * Sets minimal log severity that's displayed
          */
         const Util::Log::Severity logLevel_;
         
-        Config(int64_t targetBitrate, int64_t framebufferSize, int64_t advanceDownloadStep, int64_t frameIndexTolerance, Util::Log::Severity logLevel);
+        Config(int64_t targetBitrate, int64_t framebufferSize, int64_t advanceDownloadStep,
+               double frameTimestampTolerance, double frameTimestampDelta, Util::Log::Severity logLevel);
         
         static Config* defaultConfig();
     };

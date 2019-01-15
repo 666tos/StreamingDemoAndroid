@@ -34,6 +34,7 @@ using namespace StreamingEngine;
 
 StreamImpl::StreamImpl(Config *config, IStreamStateDelegate *stateDelegate, ITSPartLoaderService *tsPartLoaderService, const std::vector<TSPartRef> &tsParts):
     config_(config),
+    targetTimestamp_(0, 0),
     stateDelegate_(stateDelegate),
     tsPartLoaderService_(tsPartLoaderService),
     tsParts_(tsParts) {
@@ -46,7 +47,7 @@ StreamImpl::StreamImpl(Config *config, IStreamStateDelegate *stateDelegate, ITSP
     frameFactory_ = new FrameFactory(config_);
     tsPartLoader_ = new TSPartLoader(tsPartLoaderService_);
     tsPartWorker_ = new TSPartWorker(tsPartLoader_, this, config_->advanceDownloadStep_);
-    decodeWorker_ = new Decode::Worker(this, this);
+    decodeWorker_ = new Decode::Worker(config_, this, this);
 }
 
 StreamImpl::~StreamImpl() {
@@ -63,13 +64,13 @@ StreamImpl::~StreamImpl() {
 void StreamImpl::alignTSParts() {
     // Iterage through TSParts and set frame offset
 
-    int64_t totalOffset = 0;
+    double totalOffset = 0;
 
     for (auto it = tsParts_.begin(); it != tsParts_.end(); ++it) {
         TSPartRef tsPart = *it;
 
-        tsPart->setFrameOffset(totalOffset);
-        totalOffset += tsPart->numberOfFrames();
+        tsPart->setStartTime(Timestamp(totalOffset, config_->frameTimestampDelta_));
+        totalOffset += tsPart->timeRange().duration();
     }
 }
 
@@ -117,27 +118,29 @@ int64_t StreamImpl::targetBitrate() {
     return config_->targetBitrate_;
 }
 
-FrameRef StreamImpl::getFrame(int64_t index) {
+FrameRef StreamImpl::getFrame(double timestamp) {
+    Timestamp videoTimestamp(timestamp, config_->frameTimestampDelta_);
+    
     switch (state_) {
         case StreamStateReady:
         case StreamStateBuffering: {
-            if (index < targetFrameIndex_) {
+            if (videoTimestamp < targetTimestamp_) {
                 Util::Log(Util::Log::Severity::Verbose) << "[Get Frame] Flush";
                 frameFactory_->clearUsedFrames();
             }
             
-            auto frame = findFrame(index);
+            auto frame = findFrame(videoTimestamp);
             
             if (frame) {
-                Util::Log(Util::Log::Severity::Verbose) << "[Get Frame] Frame found: " << frame->getIndex();
+                Util::Log(Util::Log::Severity::Verbose) << "[Get Frame] Frame found: " << frame->getTimestamp();
                 setState(StreamStateReady);
             }
             else {
-                Util::Log(Util::Log::Severity::Verbose) << "[Get Frame] Frame NOT found: " << index;
+                Util::Log(Util::Log::Severity::Verbose) << "[Get Frame] Frame NOT found: " << videoTimestamp;
                 setState(StreamStateBuffering);
             }
             
-            determineCurrentTSPart(index);
+            determineCurrentTSPart(videoTimestamp);
             return frame;
         }
             
@@ -167,20 +170,20 @@ bool StreamImpl::hasFramesCacheCapacity() const {
     return frameFactory_->hasFramesCacheCapacity();
 }
 
-int64_t StreamImpl::targetFrameIndex() const {
-    return targetFrameIndex_;
+Timestamp StreamImpl::targetTimestamp() const {
+    return targetTimestamp_;
 }
 
 #pragma mark -
 #pragma mark WorkerDelegate
 
-void StreamImpl::addFrame(AVFrame *avframe, int64_t index) {
-    if (index < targetFrameIndex_) {
-        Util::Log(Util::Log::Severity::Verbose) << "[Add Frame] skipping: " << index;
+void StreamImpl::addFrame(AVFrame *avframe, const Timestamp &timestamp) {
+    if (timestamp < targetTimestamp_) {
+        Util::Log(Util::Log::Severity::Verbose) << "[Add Frame] skipping: " << timestamp;
     }
     else {
-        Util::Log(Util::Log::Severity::Verbose) << "[Add Frame] added: " << index;
-        frameFactory_->createFrame(avframe, index);
+        Util::Log(Util::Log::Severity::Verbose) << "[Add Frame] added: " << timestamp;
+        frameFactory_->createFrame(avframe, timestamp);
     }
 }
 
@@ -202,21 +205,18 @@ TSPartRef StreamImpl::nextPart(TSPartRef tsPart) {
 #pragma mark -
 #pragma mark Private
 
-void StreamImpl::determineCurrentTSPart(int64_t frameIndex) {
+void StreamImpl::determineCurrentTSPart(const Timestamp& timestamp) {
     TSPartRef currentTSPart = getPart();
-    if (currentTSPart &&
-        frameIndex >= currentTSPart->frameOffset() &&
-        frameIndex < currentTSPart->maxFrame()) {
-
+    if (currentTSPart && currentTSPart->timeRange().contains(timestamp)) {
         // Frame with frameIndex is contained in current part, don't switch parts
-        targetFrameIndex_ = frameIndex;
+        targetTimestamp_ = timestamp;
         return;
     }
     
     for (auto it = tsParts_.begin(); it != tsParts_.end(); ++it) {
         TSPartRef tsPart = *it;
-        if (frameIndex < tsPart->maxFrame()) {
-            targetFrameIndex_ = frameIndex;
+        if (tsPart->timeRange().contains(timestamp)) {
+            targetTimestamp_ = timestamp;
             setCurrentTSPartIndex(distance(tsParts_.begin(), it));
             break;
         }
@@ -247,6 +247,6 @@ TSPartRef StreamImpl::findNextPart(TSPartRef tsPart) {
     return nullptr;
 }
 
-FrameRef StreamImpl::findFrame(int64_t index) {
-    return frameFactory_->findFrame(index);
+FrameRef StreamImpl::findFrame(const Timestamp& timestamp) {
+    return frameFactory_->findFrame(timestamp);
 }

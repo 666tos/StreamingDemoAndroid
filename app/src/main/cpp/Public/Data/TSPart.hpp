@@ -9,6 +9,8 @@
 #ifndef TSPart_hpp
 #define TSPart_hpp
 
+#include "TimeRange.hpp"
+
 #include <cstdint>
 #include <string>
 
@@ -24,26 +26,22 @@ namespace StreamingEngine {
         TSPartState state_ = TSPartState::Idle;
         std::string url_;
         int64_t tag_ = 0;
-        uint32_t fps_ = 0;
-        
-        int64_t numberOfFrames_ = 0;
-        int64_t frameOffset_ = 0;
+        TimeRange timeRange_;
         
     public:
-        TSPart(int64_t tag, std::string url, int64_t numberOfFrames, uint32_t fps);
+        TSPart(int64_t tag, std::string url, double duration);
         ~TSPart();
         
         void markAsLoading();
         void markAsLoaded();
-        void setFrameOffset(int64_t frameOffset);
+        void setStartTime(const Timestamp& startTime);
         
         // Getters
         TSPartState state();
-        std::string url();
+        const std::string& url();
         int64_t tag();
-        int64_t numberOfFrames();
-        int64_t frameOffset();
-        int64_t maxFrame();
+        
+        const TimeRange& timeRange() const;
     };
     
     using TSPartRef = std::shared_ptr<TSPart>;
