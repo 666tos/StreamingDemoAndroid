@@ -17,7 +17,8 @@ public class MainActivity extends Activity implements Renderer.Delegate, StateDe
     private final StreamingCore mStreamingCore = new StreamingCore(this);
 
     private GLSurfaceView mGLSurfaceView;
-    private long mStartTime = 0;
+
+    private static long mStartTime = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +50,9 @@ public class MainActivity extends Activity implements Renderer.Delegate, StateDe
         // The activity must call the GL surface view's onResume() on activity onResume().
         super.onResume();
 
-        mStartTime = getTime();
+        if (mStartTime == -1) {
+            mStartTime = getTime();
+        }
 
         mGLSurfaceView.onResume();
     }

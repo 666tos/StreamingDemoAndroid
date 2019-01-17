@@ -52,8 +52,7 @@ namespace StreamingEngine {
             AVFormatContext *formatContext_ = nullptr;
             
             int streamIndex_ = -1;
-            
-            int64_t ptsStart_ = 0;
+
             AVRational timeBase_;
             
             Info(Config *config);

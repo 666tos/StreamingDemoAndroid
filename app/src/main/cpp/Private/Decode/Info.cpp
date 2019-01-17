@@ -47,7 +47,7 @@ void Info::determineFormat(RawDataRef rawData, AVIOContext *ioContext) {
 }
 
 Timestamp Info::calculateTimestamp(int64_t pts) {
-    double result = (pts != AV_NOPTS_VALUE) ? pts - ptsStart_ : 0;
+    double result = (pts != AV_NOPTS_VALUE) ? pts : 0;
     result *= av_q2d(timeBase_);
     return Timestamp(result, config_->frameTimestampDelta_);
 }
@@ -114,7 +114,6 @@ bool Info::prepareForReading() {
     
     streamIndex_ = videoStreamIndex;
     codecContext_ = codecContext;
-    ptsStart_ = stream->start_time;
     timeBase_ = stream->time_base;
 
     return true;
