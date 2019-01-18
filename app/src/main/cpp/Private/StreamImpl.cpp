@@ -7,12 +7,12 @@
 //
 
 #include "StreamImpl.hpp"
-#include "TSPartLoader.hpp"
 #include "TSPartWorker.hpp"
-#include "Worker.hpp"
+#include "DecodeWorker.hpp"
 #include "Config.hpp"
 #include "FrameFactory.hpp"
 #include "Log.hpp"
+#include "Decryptor.hpp"
 
 extern "C" {
 #include "libavcodec/avcodec.h"
@@ -32,46 +32,38 @@ extern "C" {
 using namespace std;
 using namespace StreamingEngine;
 
-StreamImpl::StreamImpl(Config *config, IStreamStateDelegate *stateDelegate, ITSPartLoaderService *tsPartLoaderService, const std::vector<TSPartRef> &tsParts):
-    config_(config),
+StreamImpl::StreamImpl(IStreamStateDelegate *stateDelegate, ITSPartLoaderService *tsPartLoaderService, IDecryptorKeyLoaderService *decryptorKeyLoaderService, Playlist *playlist):
     targetTimestamp_(0, 0),
     stateDelegate_(stateDelegate),
     tsPartLoaderService_(tsPartLoaderService),
-    tsParts_(tsParts) {
+    decryptorKeyLoaderService_(decryptorKeyLoaderService),
+    playlist_(playlist) {
 
-    Util::Log::setLogLevel(config_->logLevel_);
+    Util::Log::setLogLevel(Config::defaultConfig().logLevel_);
 
-    alignTSParts();
     initializeFFMpeg();
         
-    frameFactory_ = new FrameFactory(config_);
-    tsPartLoader_ = new TSPartLoader(tsPartLoaderService_);
-    tsPartWorker_ = new TSPartWorker(tsPartLoader_, this, config_->advanceDownloadStep_);
-    decodeWorker_ = new Decode::Worker(config_, this, this);
+    frameFactory_ = new FrameFactory();
+    decodeWorker_ = new Decode::Worker(this, this);
+        
+    decryptorKeyStorage_ = new DecryptorKeyStorage();
+    decryptor_    = new Decryptor(decryptorKeyStorage_, decryptorKeyLoaderService_);
+    tsPartWorker_ = new TSPartWorker(decodeWorker_, tsPartLoaderService_, this, decryptor_);
+        
+    Util::Log(Util::Log::Severity::Info) << "[CONSTRUCTED] playlist: " << playlist->numberOfParts() << " parts";
 }
 
 StreamImpl::~StreamImpl() {
     tsPartWorker_->stop();
     decodeWorker_->stop();
-
-    delete config_;
-    delete tsPartLoader_;
+    
+    delete playlist_;
     delete frameFactory_;
-    delete tsPartWorker_;
+
+    delete decryptorKeyStorage_;
+    delete decryptor_;
+    
     delete decodeWorker_;
-}
-
-void StreamImpl::alignTSParts() {
-    // Iterage through TSParts and set frame offset
-
-    double totalOffset = 0;
-
-    for (auto it = tsParts_.begin(); it != tsParts_.end(); ++it) {
-        TSPartRef tsPart = *it;
-
-        tsPart->setStartTime(Timestamp(totalOffset, config_->frameTimestampDelta_));
-        totalOffset += tsPart->timeRange().duration();
-    }
 }
 
 void StreamImpl::initializeFFMpeg() {
@@ -99,27 +91,25 @@ void StreamImpl::setState(StreamState state) {
     stateDelegate_->streamStateChanged(state);
 }
 
-void StreamImpl::setData(RawData *rawData, int64_t part) {
-    auto it = find_if(tsParts_.begin(), tsParts_.end(), [&part](const TSPartRef& obj) {return obj->tag() == part;});
-    if (it == tsParts_.end()) {
+void StreamImpl::setData(RawDataRef rawData, int64_t part) {
+    auto item = playlist_->findItem(part);
+    
+    if (item == nullptr) {
         Util::Log(Util::Log::Severity::Error) << "[Set Data] part not found: " << part;
         return;
     }
-
-    Util::Log(Util::Log::Severity::Info) << "LOADED TSPART: " << part;
-    TSPartRef tsPart = *it;
-    tsPart->markAsLoaded();
     
-    Decode::WorkerTask *task = new Decode::WorkerTask(part, rawData);
-    decodeWorker_->addTask(task);
+    Util::Log(Util::Log::Severity::Info) << "LOADED TSPART: " << part;
+    
+    tsPartWorker_->setData(rawData, item);
 }
 
-int64_t StreamImpl::targetBitrate() {
-    return config_->targetBitrate_;
+void StreamImpl::setDecryptionKeyData(RawDataRef rawData, const std::string& url) {
+    decryptorKeyStorage_->store(rawData, url);
 }
 
 FrameRef StreamImpl::getFrame(double timestamp) {
-    Timestamp videoTimestamp(timestamp, config_->frameTimestampDelta_);
+    Timestamp videoTimestamp(timestamp);
     
     switch (state_) {
         case StreamStateReady:
@@ -190,61 +180,41 @@ void StreamImpl::addFrame(AVFrame *avframe, const Timestamp &timestamp) {
 #pragma mark -
 #pragma mark TSPartWorkerDelegate
 
-TSPartRef StreamImpl::getPart() {
-    if ((currentTSPartIndex_ >= 0) && (currentTSPartIndex_ < tsParts_.size())) {
-        return tsParts_.at((size_t)currentTSPartIndex_);
-    }
-    
-    return nullptr;
+Playlist::ItemRef StreamImpl::getPart() {
+    return playlist_->item(currentTSPartIndex_);
 }
 
-TSPartRef StreamImpl::nextPart(TSPartRef tsPart) {
-    return findNextPart(tsPart);
+Playlist::ItemRef StreamImpl::nextPart(Playlist::ItemRef part) {
+    return playlist_->findNext(part);
 }
 
 #pragma mark -
 #pragma mark Private
 
 void StreamImpl::determineCurrentTSPart(const Timestamp& timestamp) {
-    TSPartRef currentTSPart = getPart();
-    if (currentTSPart && currentTSPart->timeRange().contains(timestamp)) {
+    auto currentPart = getPart();
+    
+    if (currentPart && currentPart->timeRange().contains(timestamp)) {
         // Frame with frameIndex is contained in current part, don't switch parts
         targetTimestamp_ = timestamp;
         return;
     }
     
-    for (auto it = tsParts_.begin(); it != tsParts_.end(); ++it) {
-        TSPartRef tsPart = *it;
-        if (tsPart->timeRange().contains(timestamp)) {
-            targetTimestamp_ = timestamp;
-            setCurrentTSPartIndex(distance(tsParts_.begin(), it));
-            break;
-        }
-        else {
-            // ??
-        }
+    size_t itemIndex = playlist_->itemIndexForTimestamp(timestamp);
+    
+    if (itemIndex != -1) {
+        targetTimestamp_ = timestamp;
+        setCurrentTSPartIndex(itemIndex);
     }
 }
 
-void StreamImpl::setCurrentTSPartIndex(int64_t tsPartIndex) {
+void StreamImpl::setCurrentTSPartIndex(size_t tsPartIndex) {
     if (currentTSPartIndex_ == tsPartIndex) {
         return;
     }
     
     Util::Log(Util::Log::Severity::Info) << "SWITCH TSPART: " << tsPartIndex;
     currentTSPartIndex_ = tsPartIndex;
-}
-
-TSPartRef StreamImpl::findNextPart(TSPartRef tsPart) {
-    auto it = find(tsParts_.begin(), tsParts_.end(), tsPart);
-    if (it != tsParts_.end()) {
-        auto nextIt = std::next(it, 1);
-        if (nextIt != tsParts_.end()) {
-            return *nextIt;
-        }
-    }
-    
-    return nullptr;
 }
 
 FrameRef StreamImpl::findFrame(const Timestamp& timestamp) {

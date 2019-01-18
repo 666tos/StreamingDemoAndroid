@@ -21,8 +21,10 @@ Config::Config(int64_t targetBitrate, int64_t framebufferSize, int64_t advanceDo
     
 }
 
-Config* Config::defaultConfig() {
-    return new Config(2000000, 180, 2,
-                      3.0 * 1.0/30.0, 0.5 * 1.0/30.0,
-                      Util::Log::Severity::Verbose);
+const Config& Config::defaultConfig() {
+    static Config instance(2000000, 180, 2,
+                           3.0 * 1.0/30.0, 0.5 * 1.0/30.0,
+                           Util::Log::Severity::Verbose);
+    
+    return instance;
 }

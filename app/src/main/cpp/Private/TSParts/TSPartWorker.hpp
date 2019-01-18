@@ -10,27 +10,45 @@
 #define TSPartWorker_hpp
 
 #include "StoppableWorker.hpp"
+#include "DecodeWorker.hpp"
+#include "RawData.hpp"
+#include "WorkerTask.hpp"
 
 #include <stdio.h>
 #include <thread>
+#include <map>
 
 namespace StreamingEngine {
-    class TSPartLoader;
+    class ITSPartLoaderService;
     class ITSPartWorkerDelegate;
-    class TSPart;
+    class PlaylistItem;
+    class Decryptor;
     
     class TSPartWorker: public StoppableWorker {
     private:
         const int PROCESSING_INTERVAL = 100; // 0.1s
         
-        TSPartLoader *tsPartLoader_;
+        mutable std::mutex mutex_;
+        std::map<int64_t, WorkerTaskRef> decryptTasks_;
+        
+        Decode::Worker *decodeWorker_;
+        ITSPartLoaderService *tsPartLoader_;
         ITSPartWorkerDelegate *delegate_;
+        Decryptor *decryptor_;
         const int64_t advanceDownloadStep_;
         
         void findAndLoadPart();
+        
+        void addDecryptTask(WorkerTaskRef decryptTask);
+        WorkerTaskRef getDecryptTask(int64_t tag);
+        void removeDecryptTask(int64_t tag);
+        
+        void performDecryption(WorkerTaskRef decryptTask, Playlist::ItemRef item);
     public:
-        TSPartWorker(TSPartLoader *tsPartLoader, ITSPartWorkerDelegate *delegate, int64_t advanceDownloadStep);
+        TSPartWorker(Decode::Worker *decodeWorker, ITSPartLoaderService *tsPartLoader, ITSPartWorkerDelegate *delegate, Decryptor *decryptor, int64_t advanceDownloadStep = Config::defaultConfig().advanceDownloadStep_);
         ~TSPartWorker();
+        
+        void setData(RawDataRef rawData, Playlist::ItemRef item);
         
         virtual void run();
     };

@@ -6,11 +6,11 @@
 //  Copyright © 2018 Tacx. All rights reserved.
 //
 
-#include "Worker.hpp"
+#include "DecodeWorker.hpp"
 #include "Frame.hpp"
 #include "FrameReader.hpp"
 #include "Log.hpp"
-#include "Config.hpp"
+#include "MutexMacro.hpp"
 
 #include <unistd.h>
 
@@ -22,12 +22,12 @@ using namespace std;
 using namespace StreamingEngine;
 using namespace StreamingEngine::Decode;
 
-Worker::Worker(Config *config, IStreamFrameAccessor *streamFrameAccessor, IWorkerDelegate *delegate):
+Worker::Worker(IStreamFrameAccessor *streamFrameAccessor, IWorkerDelegate *delegate):
     streamFrameAccessor_(streamFrameAccessor),
     delegate_(delegate) {
 
     frameReader_ = new FrameReader(streamFrameAccessor, delegate);
-    decodeInfo_ = new Info(config);
+    decodeInfo_ = new Info();
         
     streamDataProvider_ = new InputStreamDataProvider(this);
     streamDataProvider_->delegate_ = this;
@@ -43,15 +43,15 @@ Worker::~Worker() {
     delete streamDataProvider_;
 }
 
-void Worker::addTask(WorkerTask *task) {
-    mutex_.lock();
-    tasks_.push_back(WorkerTaskRef(task));
-    mutex_.unlock();
+void Worker::addTask(WorkerTaskRef task) {
+    synchronize_scope(mutex_);
+    tasks_.push_back(task);
     
     Util::Log(Util::Log::Severity::Verbose) << "[Add TS task]: " << task->index();
 }
 
-WorkerTaskRef Worker::getTask() {
+WorkerTaskRef Worker::getTask() const {
+    synchronize_scope(mutex_);
     if (!streamFrameAccessor_->hasFramesCacheCapacity() || tasks_.empty()) {
         return nullptr;
     }
@@ -71,10 +71,8 @@ void Worker::run() {
             
         case StreamStateBuffering:
         case StreamStateReady: {
-            mutex_.lock();
             WorkerTaskRef task = getTask();
-            mutex_.unlock();
-            
+
             if (task == nullptr) {
                 break;
             }
@@ -115,8 +113,11 @@ void Worker::run() {
 #pragma mark IInputStreamDataProviderDelegate
 
 void Worker::getNextData() {
-    mutex_.lock();
-    
+    synchronize_scope(mutex_);
+    performGetNextData();
+}
+
+void Worker::performGetNextData() {
     if (lastTask_ != nullptr) {
         Util::Log(Util::Log::Severity::Verbose) << "[Stream finished reading]: " << lastTask_->index();
         
@@ -132,6 +133,4 @@ void Worker::getNextData() {
     }
     
     lastTask_ = nullptr;
-    
-    mutex_.unlock();
 }

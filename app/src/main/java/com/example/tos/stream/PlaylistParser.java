@@ -5,6 +5,7 @@ import android.os.AsyncTask;
 
 import com.iheartradio.m3u8.Encoding;
 import com.iheartradio.m3u8.Format;
+import com.iheartradio.m3u8.data.EncryptionData;
 import com.iheartradio.m3u8.data.MasterPlaylist;
 import com.iheartradio.m3u8.data.MediaPlaylist;
 import com.iheartradio.m3u8.data.Playlist;
@@ -84,7 +85,11 @@ class PlaylistParser extends AsyncTask<Void, Void, List<TsPart>> {
         int index = 1;
         final List<TsPart> tsPartList = new ArrayList<>(mediaPlaylist.getTracks().size());
         for (TrackData trackData : mediaPlaylist.getTracks()) {
-            tsPartList.add(new TsPart(index++, trackData.getTrackInfo().duration, getUrlFromManifest(mediaPlaylistUrlSpec, trackData.getUri())));
+            EncryptionData encryptionData = trackData.getEncryptionData();
+
+            TsPartKey key = new TsPartKey(encryptionData);
+
+            tsPartList.add(new TsPart(index++, trackData.getTrackInfo().duration, getUrlFromManifest(mediaPlaylistUrlSpec, trackData.getUri()), key));
         }
 
         return tsPartList;

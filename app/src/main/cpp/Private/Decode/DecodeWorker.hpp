@@ -20,7 +20,7 @@
 #include "IWorkerDelegate.hpp"
 #include "WorkerTask.hpp"
 #include "Info.hpp"
-#include "TSPart.hpp"
+#include "PlaylistItem.hpp"
 
 struct AVFormatContext;
 struct AVCodecContext;
@@ -30,8 +30,6 @@ struct AVPacket;
 struct AVFrame;
 
 namespace StreamingEngine {
-    class Config;
-    
     namespace Decode {
         class Info;
         class FrameReader;
@@ -41,23 +39,25 @@ namespace StreamingEngine {
             FrameReader *frameReader_;
             Info *decodeInfo_;
             InputStreamDataProvider *streamDataProvider_;
-            std::mutex mutex_;
+            mutable std::mutex mutex_;
             std::vector<WorkerTaskRef> tasks_;
             WorkerTaskRef lastTask_;
             
             IStreamFrameAccessor *streamFrameAccessor_;
             IWorkerDelegate *delegate_;
             
-            WorkerTaskRef getTask();
+            WorkerTaskRef getTask() const;
             
             // IInputStreamDataProviderDelegate
             virtual void getNextData();
             
+            void performGetNextData();
+            
         public:
-            Worker(Config *config, IStreamFrameAccessor *streamFrameAccessor, IWorkerDelegate *delegate);
+            Worker(IStreamFrameAccessor *streamFrameAccessor, IWorkerDelegate *delegate);
             ~Worker();
             
-            void addTask(WorkerTask *task);
+            void addTask(WorkerTaskRef task);
             
             virtual void run();
         };

@@ -63,10 +63,11 @@ namespace StreamingEngine {
          */
         const Util::Log::Severity logLevel_;
         
+        static const Config &defaultConfig();
+        
+    private:
         Config(int64_t targetBitrate, int64_t framebufferSize, int64_t advanceDownloadStep,
                double frameTimestampTolerance, double frameTimestampDelta, Util::Log::Severity logLevel);
-        
-        static Config* defaultConfig();
     };
 }
 

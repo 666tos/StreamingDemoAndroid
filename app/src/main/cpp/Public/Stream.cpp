@@ -22,8 +22,8 @@ extern "C" {
 using namespace std;
 using namespace StreamingEngine;
 
-Stream::Stream(IStreamStateDelegate *stateDelegate, ITSPartLoaderService *tsPartLoader, const std::vector<TSPartRef> &tsParts, Config *config) {
-    impl_ = new StreamImpl(config, stateDelegate, tsPartLoader, tsParts);
+Stream::Stream(IStreamStateDelegate *stateDelegate, ITSPartLoaderService *tsPartLoader, IDecryptorKeyLoaderService *decryptorKeyLoader, Playlist *playlist) {
+    impl_ = new StreamImpl(stateDelegate, tsPartLoader, decryptorKeyLoader, playlist);
 }
 
 Stream::~Stream() {
@@ -34,12 +34,12 @@ StreamState Stream::state() {
     return impl_->state();
 }
 
-void Stream::setData(RawData *rawData, int64_t part) {
+void Stream::setData(RawDataRef rawData, int64_t part) {
     impl_->setData(rawData, part);
 }
 
-int64_t Stream::targetBitrate() {
-    return impl_->targetBitrate();
+void Stream::setDecryptionKeyData(RawDataRef rawData, const std::string& url) {
+    impl_->setDecryptionKeyData(rawData, url);
 }
 
 FrameRef Stream::getFrame(double timestamp) {

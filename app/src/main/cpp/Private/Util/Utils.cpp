@@ -11,9 +11,7 @@
 #include <math.h>
 
 #ifdef __IOS_HARDWARE_DECODING__
-
 #include <mach/mach.h>
-
 #endif
 
 using namespace StreamingEngine;

@@ -20,6 +20,11 @@ RawData::RawData(const void *data, size_t size, Allocation allocation):
     memcpy(data_, data, size);
 }
 
+RawData::RawData(const RawData &rawData2):
+    RawData(rawData2.data_, rawData2.size_, rawData2.allocation_) {
+    
+}
+
 RawData::~RawData() {
     deallocateMemory();
 }

@@ -11,7 +11,6 @@
 
 #include <memory>
 #include "RawData.hpp"
-#include "Config.hpp"
 #include "Timestamp.hpp"
 
 extern "C" {
@@ -45,7 +44,6 @@ namespace StreamingEngine {
         #endif
             
         public:
-            Config *config_;
             AVFrame *frame_;
             AVInputFormat *inputFormat_ = nullptr;
             AVCodecContext *codecContext_ = nullptr;
@@ -56,7 +54,7 @@ namespace StreamingEngine {
             int64_t ptsStart_ = 0;
             AVRational timeBase_;
             
-            Info(Config *config);
+            Info();
             ~Info();
             
             void determineFormat(RawDataRef rawData, AVIOContext *ioContext);
