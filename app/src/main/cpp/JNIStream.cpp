@@ -10,6 +10,7 @@
 #include "Log.hpp"
 #include "RawData.hpp"
 #include "JNICore.h"
+#include "JNIStreamPool.h"
 
 #include <jni.h>
 #include <sys/types.h>
@@ -20,9 +21,7 @@ using namespace std;
 using namespace Core;
 using namespace StreamingEngine;
 
-static Stream *sStream_ = nullptr;
-
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *env, jclass type, jobject tsPartList, jint tsPartListSize, jobject stateDelegate, jobject loader) {
+JNIEXPORT jlong JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *env, jclass type, jobject tsPartList, jint tsPartListSize, jobject stateDelegate, jobject loader) {
     auto stateDelegateImpl = new JNIStreamStateDelegateImpl(stateDelegate);
     auto loadServiceImpl = new JNITSPartLoaderServiceImpl(loader);
 
@@ -49,18 +48,26 @@ JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *e
                 env->CallDoubleMethod(tsPart, getDurationMethodID)));
     }
 
-    sStream_ = new Stream(stateDelegateImpl, loadServiceImpl, tsParts);
-    sStream_->start();
+    auto stream = new Stream(stateDelegateImpl, loadServiceImpl, tsParts);
+    auto handle = getStreamPool().add(stream);
+    stream->start();
+
+    return handle;
 }
 
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_deleteStream(JNIEnv *env, jclass type) {
-    sStream_->stop();
-    delete sStream_;
+JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_deleteStream(JNIEnv *env, jclass type, jlong handle) {
+    auto stream = getStreamPool().get(handle);
+    stream->stop();
+    getStreamPool().remove(handle);
 }
 
-JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jdouble timestamp, jint textureIDY, jint textureIDU, jint textureIDV, jint uTextureAspectRatio) {
-    auto frame = sStream_->getFrame(timestamp);
+JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jlong handle, double timestamp, jint textureIDY, jint textureIDU, jint textureIDV, jint uTextureAspectRatio) {
+    auto stream = getStreamPool().get(handle);
+    if (stream == nullptr) {
+        return false;
+    }
 
+    auto frame = stream->getFrame(timestamp);
     if (frame == nullptr) {
         return false;
     }
@@ -95,7 +102,12 @@ JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *
     return true;
 }
 
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setData(JNIEnv *env, jclass type, jbyteArray data, jint part) {
+JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setData(JNIEnv *env, jclass type, jlong handle, jbyteArray data, jint part) {
+    auto stream = getStreamPool().get(handle);
+    if (stream == nullptr) {
+        return;
+    }
+
     int length = env->GetArrayLength(data);
 
     void *dataBuffer = env->GetPrimitiveArrayCritical(data, NULL);
@@ -103,7 +115,7 @@ JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setData(JNIEnv *env, j
 
     env->ReleasePrimitiveArrayCritical(data, dataBuffer, 0);
 
-    sStream_->setData(rawData, part);
+    stream->setData(rawData, part);
 
     if (env->ExceptionCheck()) return;
 }
