@@ -6,7 +6,8 @@ import java.util.List;
 
 public class StreamingCore {
 
-    final Loader loader = new Loader();
+    private final Loader loader = new Loader();
+    private final long nativeStreamHandle;
 
     public StreamingCore(StateDelegate stateDelegate) {
         List<TsPart> tsPartList = null;
@@ -18,23 +19,26 @@ public class StreamingCore {
         }
 
         if (tsPartList != null) {
-            JNIStream.createStream(tsPartList, tsPartList.size(), stateDelegate, loader);
+            nativeStreamHandle = JNIStream.createStream(tsPartList, tsPartList.size(), stateDelegate, loader);
             loader.mStreamingCore = this;
+        }
+        else {
+            nativeStreamHandle = -1;
         }
     }
 
     public boolean bindFrame(double timestamp, int uPlaneY, int uPlaneU, int uPlaneV, int uTextureAspectRatio) {
-        return JNIStream.bindFrame(timestamp, uPlaneY, uPlaneU, uPlaneV, uTextureAspectRatio);
+        return JNIStream.bindFrame(nativeStreamHandle, timestamp, uPlaneY, uPlaneU, uPlaneV, uTextureAspectRatio);
     }
 
     public void setData(byte data[], int part) {
-        JNIStream.setData(data, part);
+        JNIStream.setData(nativeStreamHandle, data, part);
     }
 
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
 
-        JNIStream.deleteStream();
+        JNIStream.deleteStream(nativeStreamHandle);
     }
 }
