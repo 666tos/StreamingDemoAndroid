@@ -49,15 +49,20 @@ void StoppableWorker::stop() {
 void StoppableWorker::doRun() {
     // Check if thread is requested to stop ?
     while (true) {
-        synchronize_scope(mutex_);
-        if (isThreadCancelled_) {
+        if (isThreadCancelled()) {
             return;
         }
-        
+
         run();
     }
 }
 
 void StoppableWorker::threadProc(StoppableWorker *worker) {
     worker->doRun();
+}
+
+bool StoppableWorker::isThreadCancelled() {
+    synchronize_scope(mutex_);
+
+    return isThreadCancelled_;
 }

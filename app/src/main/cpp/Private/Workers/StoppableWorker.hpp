@@ -33,6 +33,8 @@ namespace StreamingEngine {
 
         // Request the thread to stop by setting value in promise object
         void stop();
+    protected:
+        bool isThreadCancelled();
     };
 }
 #endif /* StoppableWorker_hpp */
