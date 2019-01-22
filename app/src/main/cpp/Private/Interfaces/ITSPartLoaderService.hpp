@@ -9,15 +9,19 @@
 #ifndef ITSPartLoaderService_hpp
 #define ITSPartLoaderService_hpp
 
-#include "TSPart.hpp"
+#include "PlaylistItem.hpp"
 
 namespace StreamingEngine {
-    class TSPart;
-    
     class ITSPartLoaderService {
     public:
         virtual ~ITSPartLoaderService() {};
-        virtual void load(TSPartRef tsPart) = 0;
+        virtual void load(Playlist::ItemRef item) final {
+            item->markAsLoading();
+            load(item->url(), item->tag());
+        }
+
+    protected:
+        virtual void load(const std::string& url, int64_t tag) = 0;
     };
 }
 

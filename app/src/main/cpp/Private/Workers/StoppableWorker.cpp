@@ -6,6 +6,7 @@
 //
 
 #include "StoppableWorker.hpp"
+#include "MutexMacro.hpp"
 
 #include <chrono>
 
@@ -29,9 +30,10 @@ void StoppableWorker::start() {
 
 // Request the thread to stop by setting value in promise object
 void StoppableWorker::stop() {
-    mutex_.lock();
-    isThreadCancelled_ = true;
-    mutex_.unlock();
+    {
+        synchronize_scope(mutex_);
+        isThreadCancelled_ = true;
+    }
     
     if (thread_ && (thread_->joinable())) {
         thread_->join();
@@ -47,17 +49,12 @@ void StoppableWorker::stop() {
 void StoppableWorker::doRun() {
     // Check if thread is requested to stop ?
     while (true) {
-        mutex_.lock();
-        
-        if (!isThreadCancelled_) {
-            run();
-        }
-        else {
-            mutex_.unlock();
+        synchronize_scope(mutex_);
+        if (isThreadCancelled_) {
             return;
         }
         
-        mutex_.unlock();
+        run();
     }
 }
 

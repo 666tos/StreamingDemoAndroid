@@ -23,8 +23,7 @@ using namespace std;
 using namespace StreamingEngine;
 using namespace StreamingEngine::Decode;
 
-Info::Info(Config *config):
-    config_(config),
+Info::Info():
     frame_(av_frame_alloc()) {
      
 }
@@ -49,7 +48,7 @@ void Info::determineFormat(RawDataRef rawData, AVIOContext *ioContext) {
 Timestamp Info::calculateTimestamp(int64_t pts) {
     double result = (pts != AV_NOPTS_VALUE) ? pts : 0;
     result *= av_q2d(timeBase_);
-    return Timestamp(result, config_->frameTimestampDelta_);
+    return Timestamp(result);
 }
 
 #pragma mark -

@@ -6,14 +6,13 @@
 //
 
 #include "FrameFactory.hpp"
-#include "Utils.hpp"
+#include "MutexMacro.hpp"
 #include <memory>
 
 using namespace std;
 using namespace StreamingEngine;
 
-FrameFactory::FrameFactory(Config *config):
-    config_(config) {
+FrameFactory::FrameFactory() {
     
 }
 
@@ -22,30 +21,64 @@ FrameFactory::~FrameFactory() {
 }
 
 void FrameFactory::createFrame(AVFrame *avframe, const Timestamp& timestamp) {
-    freeFramesMutex_.lock();
+    auto frame = popFreeFrame();
     
-    auto it = freeFrames_.begin();
-    FrameRef frame = nullptr;
-    
-    if (it != freeFrames_.end()) {
-        frame = *it;
+    if (frame != nullptr) {
         frame->setFrame(avframe, timestamp);
-        freeFrames_.erase(it);
+        useFrame(frame);
     }
     else {
-        frame = make_shared<Frame>(avframe, timestamp);
+        useFrame(make_shared<Frame>(avframe, timestamp));
     }
-    
-    freeFramesMutex_.unlock();
-    
-    useFrame(frame);
 }
 
 FrameRef FrameFactory::findFrame(const Timestamp& timestamp) {
-    usedFramesMutex_.lock();
+    synchronize_scope(usedFramesMutex_);
+    return performFindFrame(timestamp);
+}
+
+void FrameFactory::clearUsedFrames() {
+    synchronize_scope(usedFramesMutex_);
+    synchronize_scope(freeFramesMutex_);
     
-    FrameRef resultFrame = nullptr;
+    copy(usedFrames_.begin(), usedFrames_.end(), back_inserter(freeFrames_));
+    usedFrames_.clear();
+}
+
+bool FrameFactory::hasFramesCacheCapacity() const {
+    synchronize_scope(usedFramesMutex_);
+    return usedFrames_.size() < Config::defaultConfig().framebufferSize_;
+}
+
+#pragma mark -
+#pragma mark Private
+
+void FrameFactory::useFrame(FrameRef frame) {
+    synchronize_scope(usedFramesMutex_);
+    usedFrames_.push_back(frame);
+}
+
+void FrameFactory::reuseFrame(FrameRef frame) {
+    synchronize_scope(freeFramesMutex_);
+    freeFrames_.push_back(frame);
+}
+
+FrameRef FrameFactory::popFreeFrame() {
+    synchronize_scope(freeFramesMutex_);
     
+    auto it = freeFrames_.begin();
+    
+    if (it != freeFrames_.end()) {
+        auto frame = *it;
+        freeFrames_.erase(it);
+        
+        return frame;
+    }
+    
+    return nullptr;
+}
+
+FrameRef FrameFactory::performFindFrame(const Timestamp& timestamp) {
     for (auto it = usedFrames_.begin(); it != usedFrames_.end(); ) {
         auto frame = *it;
         
@@ -55,7 +88,7 @@ FrameRef FrameFactory::findFrame(const Timestamp& timestamp) {
              * @frame is not needed anymore and can be deleted.
              */
             
-            reuseFrame(*it);
+            reuseFrame(frame);
             it = usedFrames_.erase(it);
         }
         else if (frame->getTimestamp() == timestamp) {
@@ -63,9 +96,8 @@ FrameRef FrameFactory::findFrame(const Timestamp& timestamp) {
              * Happy case, @frame's timestamp equals to @timestamp requested.
              */
             
-            resultFrame = frame;
-            break;
-        } else if (Timestamp::approximatelyEqual(frame->getTimestamp(), timestamp, config_->frameTimestampDelta_)) {
+            return frame;
+        } else if (Timestamp::approximatelyEqual(frame->getTimestamp(), timestamp, Config::defaultConfig().frameTimestampTolerance_)) {
             /**
              * Corner case, @frame's timestamp is greater than @timestamp requested.
              * This means that frame with @timestamp was not decoded, but the next one was.
@@ -73,8 +105,7 @@ FrameRef FrameFactory::findFrame(const Timestamp& timestamp) {
              */
             
             Util::Log(Util::Log::Severity::Warning) << "[Find Frame] Requested frame: " << timestamp << " but only found frame: " << frame->getTimestamp();
-            resultFrame = frame;
-            break;
+            return frame;
         } else {
             /**
              * Should never happen since frames are always sorted.
@@ -84,40 +115,5 @@ FrameRef FrameFactory::findFrame(const Timestamp& timestamp) {
         }
     }
     
-    usedFramesMutex_.unlock();
-    return resultFrame;
-}
-
-void FrameFactory::clearUsedFrames() {
-    usedFramesMutex_.lock();
-    freeFramesMutex_.lock();
-    
-    copy(usedFrames_.begin(), usedFrames_.end(), back_inserter(freeFrames_));
-    usedFrames_.clear();
-    
-    freeFramesMutex_.unlock();
-    usedFramesMutex_.unlock();
-}
-
-bool FrameFactory::hasFramesCacheCapacity() const {
-    return usedFrames_.size() < config_->framebufferSize_;
-}
-
-#pragma mark -
-#pragma mark Private
-
-void FrameFactory::useFrame(FrameRef frame) {
-    usedFramesMutex_.lock();
-    
-    usedFrames_.push_back(frame);
-    
-    usedFramesMutex_.unlock();
-}
-
-void FrameFactory::reuseFrame(FrameRef frame) {
-    freeFramesMutex_.lock();
-    
-    freeFrames_.push_back(frame);
-    
-    freeFramesMutex_.unlock();
+    return nullptr;
 }

@@ -4,12 +4,16 @@
 
 #include "JNIStream.h"
 #include "JNIStreamStateDelegateImpl.h"
-#include "JNITSPartLoaderServiceImpl.h"
+#include "JNILoaderServicesImpl.h"
 #include "Stream.hpp"
 #include "IStreamStateDelegate.hpp"
 #include "Log.hpp"
 #include "RawData.hpp"
 #include "JNICore.h"
+#include "JNIStreamPool.h"
+#include "JNIUtils.h"
+#include "Playlist.hpp"
+#include "JNIPlaylistConverter.h"
 
 #include <jni.h>
 #include <sys/types.h>
@@ -20,47 +24,32 @@ using namespace std;
 using namespace Core;
 using namespace StreamingEngine;
 
-static Stream *sStream_ = nullptr;
-
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *env, jclass type, jobject tsPartList, jint tsPartListSize, jobject stateDelegate, jobject loader) {
+JNIEXPORT jlong JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *env, jclass type, jobject tsPartList, jint tsPartListSize, jobject stateDelegate, jobject loader) {
     auto stateDelegateImpl = new JNIStreamStateDelegateImpl(stateDelegate);
-    auto loadServiceImpl = new JNITSPartLoaderServiceImpl(loader);
+    auto loadServiceImpl = new JNILoaderServicesImpl(loader);
 
-    std::vector<TSPartRef> tsParts;
+    auto playlist = JNIPlaylistConverter::createPlaylist(env, tsPartList, tsPartListSize);
 
-    jclass listClass = env->GetObjectClass(tsPartList);
-    jmethodID getMethodID = env->GetMethodID(listClass, "get", "(I)Ljava/lang/Object;");
-    jobject tsPart;
-    for (int i = 0; i < tsPartListSize; i++) {
-        tsPart = env->CallObjectMethod(tsPartList, getMethodID, i);
-        jclass tsPartClass = env->GetObjectClass(tsPart);
-        jmethodID getDurationMethodID = env->GetMethodID(tsPartClass, "getDuration", "()D");
-        jmethodID getIndexMethodID = env->GetMethodID(tsPartClass, "getIndex", "()I");
-        jmethodID getUrlMethodID = env->GetMethodID(tsPartClass, "getUrl", "()Ljava/lang/String;");
-        const char *str = env->GetStringUTFChars(static_cast<jstring>(env->CallObjectMethod(tsPart, getUrlMethodID)), NULL);
-        string url(str);
-        //env->R
+    auto stream = new Stream(stateDelegateImpl, loadServiceImpl, loadServiceImpl, playlist);
+    auto handle = getStreamPool().add(stream);
+    stream->start();
 
-        Util::Log(Util::Log::Severity::Debugger) << url;
+    return handle;
+}
 
-        tsParts.push_back(make_shared<TSPart>(
-                env->CallIntMethod(tsPart, getIndexMethodID),
-                url,
-                env->CallDoubleMethod(tsPart, getDurationMethodID)));
+JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_deleteStream(JNIEnv *env, jclass type, jlong handle) {
+    auto stream = getStreamPool().get(handle);
+    stream->stop();
+    getStreamPool().remove(handle);
+}
+
+JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jlong handle, double timestamp, jint textureIDY, jint textureIDU, jint textureIDV, jint uTextureAspectRatio) {
+    auto stream = getStreamPool().get(handle);
+    if (stream == nullptr) {
+        return false;
     }
 
-    sStream_ = new Stream(stateDelegateImpl, loadServiceImpl, tsParts);
-    sStream_->start();
-}
-
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_deleteStream(JNIEnv *env, jclass type) {
-    sStream_->stop();
-    delete sStream_;
-}
-
-JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jdouble timestamp, jint textureIDY, jint textureIDU, jint textureIDV, jint uTextureAspectRatio) {
-    auto frame = sStream_->getFrame(timestamp);
-
+    auto frame = stream->getFrame(timestamp);
     if (frame == nullptr) {
         return false;
     }
@@ -95,15 +84,28 @@ JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *
     return true;
 }
 
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setData(JNIEnv *env, jclass type, jbyteArray data, jint part) {
-    int length = env->GetArrayLength(data);
+JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setData(JNIEnv *env, jclass type, jlong handle, jbyteArray data, jint part) {
+    auto stream = getStreamPool().get(handle);
+    if (stream == nullptr) {
+        return;
+    }
 
-    void *dataBuffer = env->GetPrimitiveArrayCritical(data, NULL);
-    RawData *rawData = new RawData(dataBuffer, length);
+    auto rawData = JNIUtils::rawDataFromByteArray(env, data);
+    stream->setData(rawData, part);
 
-    env->ReleasePrimitiveArrayCritical(data, dataBuffer, 0);
+    if (env->ExceptionCheck()) return;
+}
 
-    sStream_->setData(rawData, part);
+JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setDecryptionKeyData(JNIEnv *env, jclass type, jlong handle, jbyteArray jdata, jstring jurl) {
+    auto stream = getStreamPool().get(handle);
+    if (stream == nullptr) {
+        return;
+    }
+
+    auto rawData = JNIUtils::rawDataFromByteArray(env, jdata);
+    auto url = JNIUtils::string(env, jurl);
+
+    stream->setDecryptionKeyData(rawData, url);
 
     if (env->ExceptionCheck()) return;
 }

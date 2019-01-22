@@ -15,9 +15,8 @@ extern "C" {
 
 using namespace std;
 using namespace StreamingEngine;
-using namespace StreamingEngine::Decode;
 
-WorkerTask::WorkerTask(int64_t index, RawData *rawData):
+WorkerTask::WorkerTask(int64_t index, RawDataRef rawData):
     index_(index),
     rawData_(rawData) {
     

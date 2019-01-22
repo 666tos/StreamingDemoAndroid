@@ -20,7 +20,7 @@
 
 #include "IWorkerDelegate.hpp"
 #include "Frame.hpp"
-#include "TSPart.hpp"
+#include "PlaylistItem.hpp"
 #include "ITSPartWorkerDelegate.hpp"
 #include "IStreamStateDelegate.hpp"
 #include "ITSPartLoaderService.hpp"
@@ -30,10 +30,11 @@ extern "C" {
 }
 
 namespace StreamingEngine {
-    class TSPartLoader;
     class TSPartWorker;
-    class Config;
     class FrameFactory;
+    class Decryptor;
+    class IDecryptorKeyLoaderService;
+    class DecryptorKeyStorage;
     
     namespace Decode {
         class Worker;
@@ -41,24 +42,27 @@ namespace StreamingEngine {
     
     class StreamImpl: private IStreamFrameAccessor, Decode::IWorkerDelegate, ITSPartWorkerDelegate {
     private:
-        Config *config_;
         StreamState state_ = StreamStateStopped;
         
-        std::vector<TSPartRef> tsParts_;
+        Playlist *playlist_;
         
         FrameFactory *frameFactory_;
         
-        int64_t currentTSPartIndex_ = -1;
+        size_t currentTSPartIndex_ = -1;
         
         Timestamp targetTimestamp_;
         
         IStreamStateDelegate *stateDelegate_;
         ITSPartLoaderService *tsPartLoaderService_;
-        TSPartLoader *tsPartLoader_;
-        TSPartWorker *tsPartWorker_;
+        
+        IDecryptorKeyLoaderService *decryptorKeyLoaderService_;
+        DecryptorKeyStorage *decryptorKeyStorage_;
+        Decryptor *decryptor_;
+        
         Decode::Worker *decodeWorker_;
+        
+        TSPartWorker *tsPartWorker_;
 
-        void alignTSParts();
         void initializeFFMpeg();
         void setState(StreamState state);
         
@@ -70,23 +74,22 @@ namespace StreamingEngine {
         virtual void addFrame(AVFrame *avframe, const Timestamp& timestamp);
         
         // TSPartWorkerDelegate
-        virtual TSPartRef getPart();
-        virtual TSPartRef nextPart(TSPartRef tsPart);
+        virtual Playlist::ItemRef getPart();
+        virtual Playlist::ItemRef nextPart(Playlist::ItemRef tsPart);
         
         void determineCurrentTSPart(const Timestamp& timestamp);
-        void setCurrentTSPartIndex(int64_t tsPartIndex);
-        TSPartRef findNextPart(TSPartRef tsPart);
+        void setCurrentTSPartIndex(size_t tsPartIndex);
         FrameRef findFrame(const Timestamp& timestamp);
         
     public:
         // StreamStateProvider
         virtual StreamState state();
         
-        StreamImpl(Config *config, IStreamStateDelegate *stateDelegate, ITSPartLoaderService *tsPartLoaderService, const std::vector<TSPartRef> &tsParts);
+        StreamImpl(IStreamStateDelegate *stateDelegate, ITSPartLoaderService *tsPartLoaderService, IDecryptorKeyLoaderService *decryptorKeyLoaderService, Playlist *playlist);
         ~StreamImpl();
-        void setData(RawData *rawData, int64_t part);
+        void setData(RawDataRef rawData, int64_t part);
+        void setDecryptionKeyData(RawDataRef rawData, const std::string& url);
         
-        int64_t targetBitrate();
         FrameRef getFrame(double timestamp);
         
         void start();

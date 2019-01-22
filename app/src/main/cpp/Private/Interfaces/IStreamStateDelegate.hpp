@@ -11,7 +11,7 @@
 #include "StreamState.h"
 
 namespace StreamingEngine {
-    class TSPart;
+    class PlaylistItem;
     
     class IStreamStateDelegate {
     public:

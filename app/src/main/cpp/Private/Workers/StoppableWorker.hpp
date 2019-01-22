@@ -16,7 +16,7 @@ namespace StreamingEngine {
     private:
         bool isThreadCancelled_ = false;
         std::thread *thread_ = nullptr;
-        std::mutex mutex_;
+        mutable std::mutex mutex_;
         
         void doRun();
         static void threadProc(StoppableWorker *worker);

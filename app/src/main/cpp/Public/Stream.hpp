@@ -12,8 +12,8 @@
 #include <unistd.h>
 #include <memory>
 #include "Frame.hpp"
-#include "Config.hpp"
-#include "TSPart.hpp"
+#include "Playlist.hpp"
+#include "RawData.hpp"
 #include "Timestamp.hpp"
 
 extern "C" {
@@ -22,16 +22,16 @@ extern "C" {
 
 namespace StreamingEngine {
     class ITSPartLoaderService;
+    class IDecryptorKeyLoaderService;
     class IStreamStateDelegate;
     class StreamImpl;
-    class RawData;
     
     class Stream {
     private:
         StreamImpl *impl_;
         
     public:
-        Stream(IStreamStateDelegate *stateDelegate, ITSPartLoaderService *tsPartLoader, const std::vector<TSPartRef> &tsParts, Config *config = Config::defaultConfig());
+        Stream(IStreamStateDelegate *stateDelegate, ITSPartLoaderService *tsPartLoader, IDecryptorKeyLoaderService *decryptorKeyLoader, Playlist *playlist);
         ~Stream();
         
         /**
@@ -43,9 +43,13 @@ namespace StreamingEngine {
          * Sets downloaded @rawData for @part.
          * Once data is set, it can be decoded when necessary.
          */
-        void setData(RawData *rawData, int64_t part);
+        void setData(RawDataRef rawData, int64_t part);
         
-        int64_t targetBitrate();
+        /**
+         * Sets downloaded decryption key @rawData for @url.
+         * Once data is set, part using it can be decrypted when necessary.
+         */
+        void setDecryptionKeyData(RawDataRef rawData, const std::string& url);
         
         /**
          * Gets frame for requested timestamp.
