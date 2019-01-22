@@ -16,6 +16,51 @@ public class Loader {
     AsyncTask<Void, Void, Void> mTask;
     public StreamingCore mStreamingCore;
 
+    public void loadKey(final String urlString) {
+        System.out.println("Load decryption key: url: " + urlString);
+
+        AsyncTask<Void, Void, Void> task = new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... params) {
+                try {
+                    URL url = new URL(urlString);
+                    URLConnection conection = url.openConnection();
+                    conection.connect();
+
+                    // this will be useful so that you can show a tipical 0-100%
+                    // progress bar
+                    int lenghtOfFile = conection.getContentLength();
+
+                    // download the file
+                    InputStream inputStream = new BufferedInputStream(url.openStream(), 1024 * 8);
+
+                    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+                    int nRead;
+                    byte[] bufferData = new byte[1024];
+
+                    while ((nRead = inputStream.read(bufferData, 0, bufferData.length)) != -1) {
+                        buffer.write(bufferData, 0, nRead);
+                    }
+
+                    byte data[] = buffer.toByteArray();
+
+                    // closing streams
+                    inputStream.close();
+
+                    mStreamingCore.setDecryptionKeyData(data, urlString);
+
+                } catch (Exception e) {
+                    Log.e("Error: ", e.getMessage());
+                }
+
+                return null;
+            }
+        };
+
+        task.execute();
+    }
+
     public void load(final String urlString, final int tag) {
         System.out.println("Load chunk: tag: " + tag + " url: " + urlString);
 

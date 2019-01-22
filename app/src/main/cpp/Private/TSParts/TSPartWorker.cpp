@@ -7,19 +7,23 @@
 //
 
 #include "TSPartWorker.hpp"
-#include "TSPart.hpp"
-#include "TSPartLoader.hpp"
+#include "PlaylistItem.hpp"
+#include "ITSPartLoaderService.hpp"
 #include "ITSPartWorkerDelegate.hpp"
 #include "Log.hpp"
+#include "Decryptor.hpp"
+#include "MutexMacro.hpp"
 
 #include <unistd.h>
 
 using namespace std;
 using namespace StreamingEngine;
 
-TSPartWorker::TSPartWorker(TSPartLoader *tsPartLoader, ITSPartWorkerDelegate *delegate, int64_t advanceDownloadStep):
+TSPartWorker::TSPartWorker(Decode::Worker *decodeWorker, ITSPartLoaderService *tsPartLoader, ITSPartWorkerDelegate *delegate, Decryptor *decryptor, int64_t advanceDownloadStep):
+    decodeWorker_(decodeWorker),
     tsPartLoader_(tsPartLoader),
     delegate_(delegate),
+    decryptor_(decryptor),
     advanceDownloadStep_(advanceDownloadStep) {
         
     start();
@@ -28,8 +32,23 @@ TSPartWorker::TSPartWorker(TSPartLoader *tsPartLoader, ITSPartWorkerDelegate *de
 TSPartWorker::~TSPartWorker() {
 }
 
+void TSPartWorker::setData(RawDataRef rawData, Playlist::ItemRef item) {
+    auto task = make_shared<WorkerTask>(item->tag(), rawData);
+    
+    auto xKey = item->xKey();
+    
+    if (xKey != nullptr) {
+        addDecryptTask(task);
+        item->markAsLoaded();
+    }
+    else {
+        decodeWorker_->addTask(task);
+        item->markAsDecrypted();
+    }
+}
+
 void TSPartWorker::findAndLoadPart() {
-    TSPartRef part = delegate_->getPart();
+    auto part = delegate_->getPart();
     
     for (int i = 0; i <= advanceDownloadStep_; i++) {
         if (!part) {
@@ -37,22 +56,67 @@ void TSPartWorker::findAndLoadPart() {
         }
         
         switch (part->state()) {
-            case TSPartState::Idle:
+            case Playlist::Item::State::Idle:
                 Util::Log(Util::Log::Severity::Info) << "LOADING TSPART: " << part->tag();
                 tsPartLoader_->load(part);
                 return;
                 
-            case TSPartState::Loading:
+            case Playlist::Item::State::Loading:
                 return;
                 
-            default:
+            case Playlist::Item::State::Loaded: {
+                auto decryptTask = getDecryptTask(part->tag());
+                
+                if (decryptTask != nullptr) {
+                    performDecryption(decryptTask, part);
+                }
+                else {
+                    Util::Log(Util::Log::Severity::Error) << "Decrypt task not found: " << part->tag();
+                }
+                break;
+            }
+                
+            case Playlist::Item::State::Decrypted:
                 break;
         }
         
         part = delegate_->nextPart(part);
     }
 }
+
+void TSPartWorker::addDecryptTask(WorkerTaskRef decryptTask) {
+    synchronize_scope(mutex_);
+    decryptTasks_[decryptTask->index()] = decryptTask;
+}
+
+WorkerTaskRef TSPartWorker::getDecryptTask(int64_t tag) {
+    synchronize_scope(mutex_);
+    auto it = decryptTasks_.find(tag);
     
+    if (it != decryptTasks_.end()) {
+        return it->second;
+    }
+    
+    return nullptr;
+}
+
+void TSPartWorker::removeDecryptTask(int64_t tag) {
+    synchronize_scope(mutex_);
+    decryptTasks_.erase(tag);
+}
+
+void TSPartWorker::performDecryption(WorkerTaskRef decryptTask, Playlist::ItemRef item) {    
+    auto decryptedData = decryptor_->decrypt(decryptTask->rawData(), item);
+    
+    if (decryptedData != nullptr) {
+        Util::Log(Util::Log::Severity::Info) << "Decrypted: " << decryptTask->index();
+        
+        item->markAsDecrypted();
+        removeDecryptTask(decryptTask->index());
+        decodeWorker_->addTask(decryptTask);
+    }
+}
+
 void TSPartWorker::run() {
     findAndLoadPart();
     this_thread::sleep_for(chrono::milliseconds(PROCESSING_INTERVAL));

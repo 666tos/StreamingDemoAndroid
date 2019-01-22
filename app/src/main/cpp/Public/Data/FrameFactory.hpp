@@ -16,8 +16,6 @@
 class AVFrame;
 
 namespace StreamingEngine {
-    class Config;
-    
     /**
      * This is implementation of factory of Flyweight pattern.
      * Main idea of this class is to provide storage for frames and reuse them,
@@ -26,10 +24,8 @@ namespace StreamingEngine {
     
     class FrameFactory {
     private:
-        Config *config_;
-        
-        std::mutex usedFramesMutex_;
-        std::mutex freeFramesMutex_;
+        mutable std::mutex usedFramesMutex_;
+        mutable std::mutex freeFramesMutex_;
         std::vector<FrameRef> usedFrames_;
         std::vector<FrameRef> freeFrames_;
         
@@ -42,9 +38,21 @@ namespace StreamingEngine {
          * Reuses frame removing it from @usedFrames_ and adding to @freeFrames_
          */
         void reuseFrame(FrameRef frame);
+
+        /**
+         * Looks for a free frame and returns it, removing it if from @freeFrames,
+         * nullptr if no free frames available.
+         */
+        FrameRef popFreeFrame();
+        
+        /**
+         * Looks for a frame with given @timestamp, discarding older frames.
+         * See implementation for details.
+         */
+        FrameRef performFindFrame(const Timestamp& timestamp);
         
     public:
-        FrameFactory(Config *config);
+        FrameFactory();
         ~FrameFactory();
         
         /**
@@ -56,8 +64,7 @@ namespace StreamingEngine {
         void createFrame(AVFrame *avframe, const Timestamp& timestamp);
         
         /**
-         * Looks for a frame with given @timestamp, discarding older frames.
-         * See implementation for details.
+         * Calls performFindFrame, protecting call with mutex lock/unlock
          */
         FrameRef findFrame(const Timestamp& timestamp);
 

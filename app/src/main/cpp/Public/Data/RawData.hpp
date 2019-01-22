@@ -24,6 +24,7 @@ namespace StreamingEngine {
         };
 
         RawData(const void *data, size_t size, Allocation allocation = Allocation::Default);
+        RawData(const RawData &rawData2);
         ~RawData();
         
         uint8_t *getData();

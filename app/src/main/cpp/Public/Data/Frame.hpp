@@ -30,6 +30,7 @@ namespace StreamingEngine {
         };
         
         Frame(AVFrame* frame, const Timestamp& timestamp);
+        Frame(const Frame&) = default;
         ~Frame();
         
         void setFrame(AVFrame* frame, const Timestamp& timestamp);

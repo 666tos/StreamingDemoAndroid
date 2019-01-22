@@ -11,7 +11,7 @@ public class StreamingCore {
 
     public StreamingCore(StateDelegate stateDelegate) {
         List<TsPart> tsPartList = null;
-        final String playlistUrl = "https://tcdevmediaservice-euwe.streaming.media.azure.net/26c5c622-eeb9-43d8-8885-bbe8b12f2885/Stelvio.ism/manifest(format=m3u8-aapl)";
+        final String playlistUrl = "https://tcdevmediaservice-euwe.streaming.media.azure.net/df014ada-d739-42d6-9517-18b131b17db7/T205541.ism/manifest(format=m3u8-aapl)";
         final int targetBitrate = 1000000;
         try {
             tsPartList = new PlaylistParser(playlistUrl, targetBitrate).execute().get();
@@ -33,6 +33,10 @@ public class StreamingCore {
 
     public void setData(byte data[], int part) {
         JNIStream.setData(nativeStreamHandle, data, part);
+    }
+
+    public void setDecryptionKeyData(byte data[], String url) {
+        JNIStream.setDecryptionKeyData(nativeStreamHandle, data, url);
     }
 
     @Override

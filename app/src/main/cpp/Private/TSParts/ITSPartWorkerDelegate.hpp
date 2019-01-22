@@ -9,13 +9,13 @@
 #ifndef ITSPartWorkerDelegate_hpp
 #define ITSPartWorkerDelegate_hpp
 
-#include "TSPart.hpp"
+#include "PlaylistItem.hpp"
 
 namespace StreamingEngine {
     class ITSPartWorkerDelegate {
     public:
-        virtual TSPartRef getPart() = 0;
-        virtual TSPartRef nextPart(TSPartRef part) = 0;
+        virtual Playlist::ItemRef getPart() = 0;
+        virtual Playlist::ItemRef nextPart(Playlist::ItemRef part) = 0;
     };
 }
 

@@ -8,9 +8,9 @@
 #ifndef Utils_hpp
 #define Utils_hpp
 
-#include <stdio.h>
-
 #include "Config.hpp"
+
+#include <stdio.h>
 
 namespace StreamingEngine {
     class Utils {

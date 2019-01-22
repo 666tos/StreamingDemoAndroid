@@ -14,6 +14,8 @@ public class JNIStream {
 
     static public native void setData(long handle, byte data[], int part);
 
+    static public native void setDecryptionKeyData(long handle, byte data[], String url);
+
     // Used to load the 'TacxStreaming' library on application startup.
     static {
         System.loadLibrary("TacxStreaming");
