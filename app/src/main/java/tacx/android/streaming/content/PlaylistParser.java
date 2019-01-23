@@ -1,4 +1,4 @@
-package com.example.tos.stream;
+package tacx.android.streaming.content;
 
 import android.net.Uri;
 import android.os.AsyncTask;

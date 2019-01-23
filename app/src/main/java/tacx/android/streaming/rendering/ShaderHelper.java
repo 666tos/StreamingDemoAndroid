@@ -1,6 +1,6 @@
-package com.example.tos.streamingdemoandroid;
+package tacx.android.streaming.rendering;
 
-import android.content.Context;
+import android.content.res.Resources;
 import android.opengl.GLES20;
 import android.util.Log;
 
@@ -13,8 +13,8 @@ public class ShaderHelper
 {
     private static final String TAG = "ShaderHelper";
 
-    public static String loadShader(final Context activityContext, final int shaderResourceID) {
-        InputStream i = activityContext.getResources().openRawResource(shaderResourceID);
+    public static String loadShader(final Resources resources, final int shaderResourceID) {
+        InputStream i = resources.openRawResource(shaderResourceID);
         InputStreamReader is=new InputStreamReader(i);
         BufferedReader br=new BufferedReader(is);
         String read;
@@ -31,11 +31,11 @@ public class ShaderHelper
         return sb.toString();
     }
 
-    public static int compileShader(final Context activityContext, final int shaderType, final int shaderResourceID)  {
+    public static int compileShader(final Resources resources, final int shaderType, final int shaderResourceID)  {
         int shaderHandle = GLES20.glCreateShader(shaderType);
 
         if (shaderHandle != 0)  {
-            final String shaderSource = loadShader(activityContext, shaderResourceID);
+            final String shaderSource = loadShader(resources, shaderResourceID);
 
             // Pass in the shader source.
             GLES20.glShaderSource(shaderHandle, shaderSource);

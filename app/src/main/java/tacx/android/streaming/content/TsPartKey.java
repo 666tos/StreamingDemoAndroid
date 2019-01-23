@@ -1,4 +1,4 @@
-package com.example.tos.stream;
+package tacx.android.streaming.content;
 
 import com.iheartradio.m3u8.data.EncryptionData;
 
@@ -77,4 +77,5 @@ public class TsPartKey {
 
         return stringBuilder.toString();
     }
+
 }

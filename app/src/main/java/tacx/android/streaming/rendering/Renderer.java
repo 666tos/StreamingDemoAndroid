@@ -1,9 +1,8 @@
-package com.example.tos.streamingdemoandroid;
+package tacx.android.streaming.rendering;
 
-import android.content.Context;
+import android.content.res.Resources;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-import android.opengl.GLU;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -11,13 +10,15 @@ import java.nio.FloatBuffer;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import tacx.android.R;
+
 public class Renderer implements GLSurfaceView.Renderer  {
     public interface Delegate {
         void bindFrame(int uPlaneY, int uPlaneU, int uPlaneV, int uTextureAspectRatio);
     }
 
 
-    private final Context mActivityContext;
+    private final Resources mResources;
     private final Delegate mDelegate;
 
     private volatile float mScreenAspectRatio = 1;
@@ -46,8 +47,8 @@ public class Renderer implements GLSurfaceView.Renderer  {
     int uScreenAspectRatio;
     int uTextureAspectRatio;
 
-    public Renderer(final Context activityContext, final Delegate delegate) {
-        mActivityContext = activityContext;
+    public Renderer(final Resources resources, final Delegate delegate) {
+        mResources = resources;
         mDelegate = delegate;
     }
 
@@ -71,8 +72,8 @@ public class Renderer implements GLSurfaceView.Renderer  {
         GLES20.glEnableVertexAttribArray(2);
         GLES20.glVertexAttribPointer(2, 2, GLES20.GL_FLOAT, false, 8*4, 24);
 
-        final int vertexShaderHandle = ShaderHelper.compileShader(mActivityContext, GLES20.GL_VERTEX_SHADER, R.raw.vertex_shader);
-        final int fragmentShaderHandle = ShaderHelper.compileShader(mActivityContext, GLES20.GL_FRAGMENT_SHADER, R.raw.fragment_shader);
+        final int vertexShaderHandle = ShaderHelper.compileShader(mResources, GLES20.GL_VERTEX_SHADER, R.raw.video_vs);
+        final int fragmentShaderHandle = ShaderHelper.compileShader(mResources, GLES20.GL_FRAGMENT_SHADER, R.raw.video_fs);
 
         shaderProgram = ShaderHelper.createAndLinkProgram(vertexShaderHandle, fragmentShaderHandle,
                 new String[] {"_inPosition",  "_inNormal", "_inTexCoord"});
@@ -137,7 +138,7 @@ public class Renderer implements GLSurfaceView.Renderer  {
         GLES20.glFinish();
     }
 
-    void setScreenAspectRatio(final float aspectRatio) {
+    public void setScreenAspectRatio(final float aspectRatio) {
         mScreenAspectRatio = aspectRatio;
     }
 

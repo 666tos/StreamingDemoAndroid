@@ -38,6 +38,11 @@ JNICore::JNICore(JavaVM *vm):
 JNIEnv* JNICore::getJNIEnv() {
     JNIEnv* env;
     getInstance()->vm_->AttachCurrentThread(&env, NULL);
+
+    jclass vm_class = env->FindClass("dalvik/system/VMDebug");
+    jmethodID dump_mid = env->GetStaticMethodID( vm_class, "dumpReferenceTables", "()V" );
+    env->CallStaticVoidMethod( vm_class, dump_mid );
+
     return env;
 }
 

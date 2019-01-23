@@ -21,7 +21,10 @@ RawDataRef JNIUtils::rawDataFromByteArray(JNIEnv *jenv, jbyteArray jdata) {
 
 string JNIUtils::string(JNIEnv *jenv, jstring jstring) {
     const char *chars = jenv->GetStringUTFChars(jstring, NULL);
-    return std::string(chars);
+    std::string stdString = std::string(chars);
+    jenv->ReleaseStringUTFChars(jstring, chars);
+
+    return stdString;
 }
 
 string JNIUtils::callStringMethod(JNIEnv *jenv, jobject jObject, jmethodID jMethodID) {

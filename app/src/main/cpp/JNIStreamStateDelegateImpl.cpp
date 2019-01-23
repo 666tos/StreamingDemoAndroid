@@ -22,6 +22,7 @@ void JNIStreamStateDelegateImpl::streamStateChanged(StreamState state) {
 
     jclass delegateClass = env->GetObjectClass(delegate_);
     jmethodID methodID = env->GetMethodID(delegateClass, "stateChanged", "(I)V");
+    env->DeleteLocalRef(delegateClass);
 
     env->CallVoidMethod(delegate_, methodID, state);
 }

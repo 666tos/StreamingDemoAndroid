@@ -29,6 +29,9 @@ void JNILoaderServicesImpl::performLoad(const std::string &url) {
     jstring jUrl = jenv->NewStringUTF(url.c_str());
     jenv->CallVoidMethod(loader_, jMethodID, jUrl);
 
+    jenv->DeleteLocalRef(jUrl);
+    jenv->DeleteLocalRef(loaderClass);
+
     Util::Log(Util::Log::Severity::Verbose) << "Load key: URL: " << url;
 }
 
@@ -40,6 +43,9 @@ void JNILoaderServicesImpl::load(const std::string &url, int64_t tag) {
 
     jstring jUrl = jenv->NewStringUTF(url.c_str());
     jenv->CallVoidMethod(loader_, jMethodID, jUrl, tag);
+
+    jenv->DeleteLocalRef(jUrl);
+    jenv->DeleteLocalRef(loaderClass);
 
     Util::Log(Util::Log::Severity::Verbose) << "Load: " << tag << " URL: " << url;
 }

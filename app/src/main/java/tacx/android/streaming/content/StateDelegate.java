@@ -1,6 +1,7 @@
-package com.example.tos.stream;
+package tacx.android.streaming.content;
 
 public interface StateDelegate {
+
     enum StreamState {
         Unknown,
         Stopped,
@@ -21,4 +22,5 @@ public interface StateDelegate {
     }
 
     void stateChanged(int state);
+
 }

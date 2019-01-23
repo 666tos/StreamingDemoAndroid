@@ -1,12 +1,4 @@
-package com.example.tos.stream;
-
-import com.iheartradio.m3u8.data.EncryptionData;
-import com.iheartradio.m3u8.data.EncryptionMethod;
-
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Collectors;
+package tacx.android.streaming.content;
 
 public class TsPart {
     private final double mDuration;
@@ -36,4 +28,5 @@ public class TsPart {
     public TsPartKey getEncryptionKey() {
         return mEncryptionKey;
     }
+
 }

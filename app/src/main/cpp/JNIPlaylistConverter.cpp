@@ -11,7 +11,7 @@ using namespace Core;
 using namespace StreamingEngine;
 
 // FIXME: do it in more elegant way
-const char * tsPartKeyClassName = "com/example/tos/stream/TsPartKey";
+const char * tsPartKeyClassName = "tacx/android/streaming/content/TsPartKey";
 
 Playlist *JNIPlaylistConverter::createPlaylist(JNIEnv *env, jobject tsPartList, jint tsPartListSize) {
     vector<StreamingEngine::Playlist::ItemRef> playlistItems;

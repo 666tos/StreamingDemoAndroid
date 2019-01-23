@@ -24,7 +24,7 @@ using namespace std;
 using namespace Core;
 using namespace StreamingEngine;
 
-JNIEXPORT jlong JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *env, jclass type, jobject tsPartList, jint tsPartListSize, jobject stateDelegate, jobject loader) {
+JNIEXPORT jlong JNICALL Java_tacx_android_streaming_jni_JNIStream_createStream(JNIEnv *env, jclass type, jobject tsPartList, jint tsPartListSize, jobject stateDelegate, jobject loader) {
     auto stateDelegateImpl = new JNIStreamStateDelegateImpl(stateDelegate);
     auto loadServiceImpl = new JNILoaderServicesImpl(loader);
 
@@ -37,13 +37,13 @@ JNIEXPORT jlong JNICALL Java_com_example_tos_jni_JNIStream_createStream(JNIEnv *
     return handle;
 }
 
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_deleteStream(JNIEnv *env, jclass type, jlong handle) {
+JNIEXPORT void JNICALL Java_tacx_android_streaming_jni_JNIStream_deleteStream(JNIEnv *env, jclass type, jlong handle) {
     auto stream = getStreamPool().get(handle);
     stream->stop();
     getStreamPool().remove(handle);
 }
 
-JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jlong handle, double timestamp, jint textureIDY, jint textureIDU, jint textureIDV, jint uTextureAspectRatio) {
+JNIEXPORT jboolean JNICALL Java_tacx_android_streaming_jni_JNIStream_bindFrame(JNIEnv *env, jclass type, jlong handle, double timestamp, jint textureIDY, jint textureIDU, jint textureIDV, jint uTextureAspectRatio) {
     auto stream = getStreamPool().get(handle);
     if (stream == nullptr) {
         return false;
@@ -84,7 +84,7 @@ JNIEXPORT jboolean JNICALL Java_com_example_tos_jni_JNIStream_bindFrame(JNIEnv *
     return true;
 }
 
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setData(JNIEnv *env, jclass type, jlong handle, jbyteArray data, jint part) {
+JNIEXPORT void JNICALL Java_tacx_android_streaming_jni_JNIStream_setData(JNIEnv *env, jclass type, jlong handle, jbyteArray data, jint part) {
     auto stream = getStreamPool().get(handle);
     if (stream == nullptr) {
         return;
@@ -96,7 +96,7 @@ JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setData(JNIEnv *env, j
     if (env->ExceptionCheck()) return;
 }
 
-JNIEXPORT void JNICALL Java_com_example_tos_jni_JNIStream_setDecryptionKeyData(JNIEnv *env, jclass type, jlong handle, jbyteArray jdata, jstring jurl) {
+JNIEXPORT void JNICALL Java_tacx_android_streaming_jni_JNIStream_setDecryptionKeyData(JNIEnv *env, jclass type, jlong handle, jbyteArray jdata, jstring jurl) {
     auto stream = getStreamPool().get(handle);
     if (stream == nullptr) {
         return;

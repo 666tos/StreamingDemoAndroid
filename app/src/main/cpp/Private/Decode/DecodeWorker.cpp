@@ -92,6 +92,10 @@ void Worker::run() {
             
             if (decodeInfo_->inputFormat_) {
                 while (streamFrameAccessor_->hasFramesCacheCapacity()) {
+                    if (isThreadCancelled()) {
+                        break;
+                    }
+
                     if (AVFrame *avFrame = frameReader_->readFrame(decodeInfo_)) {
                         Timestamp timestamp = decodeInfo_->calculateTimestamp(avFrame->pts);
                         delegate_->addFrame(avFrame, timestamp);

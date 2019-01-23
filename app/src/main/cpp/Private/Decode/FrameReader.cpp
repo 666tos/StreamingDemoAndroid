@@ -83,6 +83,11 @@ bool FrameReader::shouldHandlePacket(const AVPacket *packet, Info *decodeInfo) {
     if ((packet->flags & AV_PKT_FLAG_DISCARD) != 0) {
         return false;
     }
+
+    auto timestamp = decodeInfo->calculateTimestamp(packet->pts);
+    if (timestamp < streamFrameAccessor_->targetTimestamp()) {
+        return false;
+    }
     
     return true;
 }
